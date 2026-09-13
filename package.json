@@ -1,8 +1,8 @@
 {
-  "name": "no-upload",
+  "name": "convert2any",
   "private": true,
   "version": "0.1.0",
-  "description": "Zero-upload file converter. Every conversion runs locally in your browser tab — no uploads, no accounts, no analytics.",
+  "description": "Convert, edit and secure files entirely in your browser — merge, split, compress and convert PDFs, Office documents and images with no uploads and no accounts.",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -10,7 +10,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/postbuild.mjs",
+    "zip": "npm run build && node scripts/zip.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
@@ -19,14 +20,20 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@jspawn/qpdf-wasm": "^0.0.2",
     "@jsquash/jpeg": "^1.6.0",
     "@jsquash/png": "^3.1.1",
     "@jsquash/webp": "^1.5.0",
+    "docx": "^9.7.1",
     "fflate": "^0.8.2",
     "libheif-js": "^1.23.2",
+    "mammoth": "^1.12.3",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "4.10.38",
-    "preact": "^10.27.2"
+    "preact": "^10.27.2",
+    "preact-iso": "^2.12.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
@@ -38,6 +45,7 @@
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.44.0",
     "vite": "^7.1.6",
+    "vite-prerender-plugin": "^0.5.13",
     "vitest": "^3.2.4"
   }
 }

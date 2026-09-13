@@ -3,3 +3,6 @@ dist/
 coverage/
 *.local
 .DS_Store
+
+# Built site archive produced by `npm run zip`
+convert2any-site.zip

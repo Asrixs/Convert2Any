@@ -3,12 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>no-upload — zero-upload file converter</title>
-    <meta
-      name="description"
-      content="Convert files locally in your browser. No uploads, no accounts, no analytics — nothing ever leaves your device."
-    />
+    <title>Convert2Any — convert, edit and secure files in your browser</title>
+    <!--
+      No description meta here on purpose: every route injects its own at
+      build time (see headElements in src/seo.ts). A static one would be
+      duplicated on all 27 prerendered pages.
+    -->
+    <meta name="theme-color" content="#000000" />
+    <meta name="color-scheme" content="dark" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
   </head>
   <body>
     <div id="app"></div>

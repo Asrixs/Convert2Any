@@ -1,0 +1,2 @@
+# Netlify: serve the prerendered HTML when it exists, else fall back to the SPA.
+/*  /index.html  200

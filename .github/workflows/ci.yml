@@ -18,4 +18,12 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      # Also covers prerendering: the build fails if the home page comes out
+      # as an empty shell instead of real HTML.
       - run: npm run build
+      - name: Upload site bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: convert2any-site
+          path: dist/
+          retention-days: 14
