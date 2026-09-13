@@ -1,0 +1,156 @@
+:root {
+  --bg: #0f1115;
+  --surface: #181b22;
+  --text: #e8eaf0;
+  --muted: #9aa3b2;
+  --accent: #4da3ff;
+  --ok: #4ade80;
+  --err: #f87171;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  line-height: 1.5;
+}
+
+.app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+h1 {
+  font-size: 2rem;
+  margin: 0 0 0.25rem;
+}
+
+.accent {
+  color: var(--accent);
+}
+
+.tagline {
+  color: var(--muted);
+  margin-top: 0;
+}
+
+.dropzone {
+  border: 2px dashed var(--muted);
+  border-radius: 12px;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  background: var(--surface);
+  margin: 1.5rem 0;
+}
+
+.dropzone.dragging {
+  border-color: var(--accent);
+  background: #1c2230;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.error {
+  color: var(--err);
+}
+
+.chip {
+  display: inline-block;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+
+.chip-pending {
+  background: #2a2f3a;
+}
+
+.chip-converting {
+  background: #234;
+  color: var(--accent);
+}
+
+.chip-done {
+  background: #14311f;
+  color: var(--ok);
+}
+
+.chip-error {
+  background: #3a1d1d;
+  color: var(--err);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.5rem 0.5rem 0.5rem 0;
+  border-bottom: 1px solid #232833;
+  vertical-align: top;
+}
+
+select,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+select {
+  background: var(--surface);
+  border: 1px solid #2a2f3a;
+  border-radius: 6px;
+  padding: 0.2rem 0.4rem;
+}
+
+button {
+  background: var(--surface);
+  border: 1px solid #2a2f3a;
+  border-radius: 6px;
+  padding: 0.45rem 1rem;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.quality {
+  display: block;
+  color: var(--muted);
+}
+
+input[type='range'] {
+  vertical-align: middle;
+  margin-left: 0.5rem;
+  width: 200px;
+}
+
+footer {
+  margin-top: 3rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
