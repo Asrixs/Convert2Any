@@ -1,6 +1,6 @@
 import type { ComponentChildren, JSX } from 'preact';
 import { Icon, type IconName } from './Icon';
-import { FIDELITY_COPY, type Fidelity } from '../tools/catalog';
+import { FIDELITY_COPY, type Fidelity, type Tool } from '../tools/catalog';
 
 /**
  * Shared presentational primitives.
@@ -75,29 +75,6 @@ export function Card({ children, variant = 'default', class: className }: CardPr
   return <div class={`card ${variantClass} ${className ?? ''}`.trim()}>{children}</div>;
 }
 
-/* ---------------------------------------------------------------- Chip */
-
-export function Chip({
-  children,
-  accent,
-}: {
-  children: ComponentChildren;
-  accent?: boolean;
-}): JSX.Element {
-  return <span class={`chip ${accent ? 'chip-accent' : ''}`.trim()}>{children}</span>;
-}
-
-/** Renders a list of format labels as chips — used across the catalog. */
-export function ChipList({ items }: { items: string[] }): JSX.Element {
-  return (
-    <div class="chip-list">
-      {items.map((item) => (
-        <Chip key={item}>{item}</Chip>
-      ))}
-    </div>
-  );
-}
-
 /* ------------------------------------------------------- FidelityBadge */
 
 /**
@@ -111,6 +88,34 @@ export function FidelityBadge({ level }: { level: Fidelity }): JSX.Element {
     <span class={`badge badge-${level}`} title={copy.note}>
       {copy.label}
     </span>
+  );
+}
+
+/* ------------------------------------------------------------ ToolCard */
+
+/**
+ * One tool in a grid: icon and fidelity first, then name and summary. Shared
+ * by the home page, the catalog and "related tools" so the three cannot drift.
+ */
+export function ToolCard({ tool, showFormats }: { tool: Tool; showFormats?: boolean }): JSX.Element {
+  return (
+    <a class="card card-link" href={`/tools/${tool.slug}`}>
+      <span class="tool-card-head">
+        <Icon name={tool.icon as IconName} size={20} />
+        <FidelityBadge level={tool.fidelity} />
+      </span>
+      <span class="card-title">{tool.title}</span>
+      <span class="small muted">{tool.short}</span>
+      {showFormats && tool.accepts.length > 0 && (
+        <span class="eyebrow" style="margin-top:var(--s-2)">
+          {tool.accepts
+            .slice(0, 4)
+            .map((ext) => ext.toUpperCase())
+            .join(' · ')}{' '}
+          → {tool.produces}
+        </span>
+      )}
+    </a>
   );
 }
 
@@ -157,11 +162,17 @@ export function SectionHead({
   level?: 1 | 2;
 }): JSX.Element {
   const Heading = level === 1 ? 'h1' : 'h2';
-  const size = level === 1 ? 'var(--t-4xl)' : 'var(--t-3xl)';
+  const size = level === 1 ? 'var(--t-4xl)' : 'var(--t-2xl)';
+  // Eyebrow binds tightly to the title (8px); the title owns 32px above its
+  // lead paragraph, per the heading-to-paragraph spacing rule.
   return (
-    <div class={`stack ${center ? 'center' : ''}`.trim()} style="gap:var(--s-3)">
-      {eyebrow && <p class="eyebrow">{eyebrow}</p>}
-      <Heading style={`font-size:${size}`}>{title}</Heading>
+    <div class={`heading-block ${center ? 'center' : ''}`.trim()}>
+      {eyebrow && (
+        <p class="eyebrow" style="margin-bottom:var(--s-2)">
+          {eyebrow}
+        </p>
+      )}
+      <Heading style={`font-size:${size}${lead ? '' : ';margin-bottom:0'}`}>{title}</Heading>
       {lead && (
         <p class="lead" style={center ? 'margin-inline:auto' : undefined}>
           {lead}
@@ -179,17 +190,6 @@ export function Accordion({ q, a }: { q: string; a: string }): JSX.Element {
       <summary>{q}</summary>
       <div class="accordion-body">{a}</div>
     </details>
-  );
-}
-
-/* ---------------------------------------------------------------- Stat */
-
-export function Stat({ value, label }: { value: string; label: string }): JSX.Element {
-  return (
-    <div class="stat">
-      <span class="stat-value">{value}</span>
-      <span class="stat-label">{label}</span>
-    </div>
   );
 }
 
@@ -212,15 +212,12 @@ export function FeatureItem({
   level?: 2 | 3;
 }): JSX.Element {
   const Heading = level === 2 ? 'h2' : 'h3';
+  // Grouped by space alone — a box around every point would be noise.
   return (
-    <Card>
-      <div class="stack" style="gap:var(--s-3)">
-        <span class="icon-badge">
-          <Icon name={icon} size={22} />
-        </span>
-        <Heading class="card-title">{title}</Heading>
-        <p class="small muted">{children}</p>
-      </div>
-    </Card>
+    <div class="feature">
+      <Icon name={icon} size={20} class="feature-icon" />
+      <Heading class="card-title">{title}</Heading>
+      <p class="feature-text">{children}</p>
+    </div>
   );
 }

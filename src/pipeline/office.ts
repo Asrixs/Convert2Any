@@ -36,16 +36,51 @@ export async function docxToPdf(file: Blob, options: ToolOptions): Promise<Uint8
   return renderBlocksToPdf(blocks, layoutFrom(options));
 }
 
+/**
+ * CSV is detected by file name: Windows reports .csv files as
+ * application/vnd.ms-excel when Excel is installed, so the MIME type alone
+ * cannot be trusted.
+ */
+function isCsv(file: Blob): boolean {
+  if (typeof File !== 'undefined' && file instanceof File) return /\.csv$/i.test(file.name);
+  return file.type === 'text/csv';
+}
+
+/**
+ * CSV text, decoded as UTF-8 when the bytes are valid UTF-8, otherwise as
+ * Windows-1252 — what Excel's plain "CSV (comma delimited)" export writes.
+ */
+async function csvText(file: Blob): Promise<string> {
+  const bytes = await file.arrayBuffer();
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return new TextDecoder('windows-1252').decode(bytes);
+  }
+}
+
 /** Spreadsheet (.xlsx/.csv) -> PDF, one table per sheet. */
 export async function spreadsheetToPdf(file: Blob, options: ToolOptions): Promise<Uint8Array> {
   const XLSX = await import('xlsx');
-  const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+  // CSV is text: decode it ourselves (handed raw bytes, SheetJS reads them as
+  // Latin-1, so UTF-8 "Café" became "CafÃ©"), and keep every value exactly as
+  // written rather than letting "007" become 7 or a date be reformatted.
+  const workbook = isCsv(file)
+    ? XLSX.read(await csvText(file), { type: 'string', raw: true })
+    : XLSX.read(await file.arrayBuffer(), { type: 'array' });
   const blocks: Block[] = [];
 
   for (const name of workbook.SheetNames) {
     const sheet = workbook.Sheets[name];
     if (!sheet) continue;
-    const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, blankrows: false });
+    // raw: false gives each cell's text as the spreadsheet displays it: dates
+    // as dates rather than serial numbers like 46096, "€1,234.50" rather than
+    // 1234.5, "15%" rather than 0.15.
+    const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+      header: 1,
+      blankrows: false,
+      raw: false,
+    });
     const cleaned = rows
       .map((row) => (Array.isArray(row) ? row.map((cell) => stringifyCell(cell)) : []))
       .filter((row) => row.some((cell) => cell !== ''));

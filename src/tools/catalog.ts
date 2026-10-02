@@ -28,7 +28,7 @@ export const FIDELITY_COPY: Record<Fidelity, { label: string; note: string }> = 
   },
   lossy: {
     label: 'Lossy',
-    note: 'Pages are re-rendered as images, so text stops being selectable.',
+    note: 'The result is re-encoded as images, so some detail is lost.',
   },
   unavailable: {
     label: 'Not available',
@@ -121,7 +121,7 @@ export const TOOLS: Tool[] = [
     faq: [
       {
         q: 'What order are the files merged in?',
-        a: 'The order they appear in the queue, which is the order you added them.',
+        a: 'The order shown in the file list. Use the arrows next to each file to move it up or down before you merge.',
       },
       {
         q: 'Is there a file limit?',
@@ -217,9 +217,9 @@ export const TOOLS: Tool[] = [
         name: 'order',
         label: 'New page order',
         type: 'text',
-        placeholder: 'e.g. 3,1,2',
+        placeholder: 'e.g. 3, 1, 2 or 10-1',
         required: true,
-        help: 'Comma-separated page numbers. Unlisted pages follow in their current order.',
+        help: 'Page numbers and ranges. A range like 10-1 counts down. Unlisted pages follow in their current order.',
       },
     ],
     toKind: (options) => ({ type: 'pdf-tool', tool: 'pdf-reorder', options }),
@@ -273,7 +273,7 @@ export const TOOLS: Tool[] = [
         name: 'pages',
         label: 'Pages to delete',
         type: 'text',
-        placeholder: 'e.g. 2,5,9',
+        placeholder: 'e.g. 2, 5-7, 9',
         required: true,
       },
     ],
@@ -381,7 +381,9 @@ export const TOOLS: Tool[] = [
     accepts: ['pdf'],
     multiple: false,
     produces: 'JPG / PNG',
-    fidelity: 'exact',
+    fidelity: 'lossy',
+    caveat:
+      'Pages become pictures, so their text cannot be selected or searched. JPG and WebP also compress the image slightly; PNG does not.',
     fields: [
       {
         name: 'imageFormat',
@@ -471,7 +473,8 @@ export const TOOLS: Tool[] = [
     accepts: IMAGE_INPUTS,
     multiple: true,
     produces: 'JPG / PNG / WebP',
-    fidelity: 'exact',
+    fidelity: 'lossy',
+    caveat: 'JPG and WebP re-compress the image and lose a little detail. Choose PNG to keep every pixel.',
     fields: [
       {
         name: 'imageFormat',
@@ -540,18 +543,7 @@ export const TOOLS: Tool[] = [
         name: 'ownerPassword',
         label: 'Owner password (optional)',
         type: 'password',
-        help: 'Restricts editing and printing. Defaults to the open password.',
-      },
-      {
-        name: 'keyLength',
-        label: 'Encryption strength',
-        type: 'select',
-        initial: '256',
-        choices: [
-          { value: '256', label: 'AES-256 (recommended)' },
-          { value: '128', label: 'AES-128' },
-          { value: '40', label: 'RC4-40 (legacy readers)' },
-        ],
+        help: 'A second password with full rights over the file. Defaults to the open password.',
       },
     ],
     toKind: (options) => ({ type: 'pdf-tool', tool: 'pdf-protect', options }),
@@ -559,6 +551,10 @@ export const TOOLS: Tool[] = [
       {
         q: 'Does my password leave my device?',
         a: 'No. Encryption runs in a Web Worker in this tab. There is no server to send it to.',
+      },
+      {
+        q: 'Why is there no weaker, more compatible option?',
+        a: 'The older 40- and 128-bit PDF encryption modes use RC4, which is broken. Every PDF reader from the last fifteen years opens AES-256 files.',
       },
     ],
   },

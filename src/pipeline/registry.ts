@@ -183,21 +183,23 @@ export function pageImageName(
  *
  * Tools needing configuration (watermark text, page ranges, passwords) are
  * NOT here — they live on their own pages where a form can collect those
- * options. This list is only the choices that are meaningful with defaults.
+ * options. This list is only the choices that are meaningful with defaults,
+ * for ONE file: merging needs several, so it is offered separately when more
+ * than one PDF is queued. The first entry is the default.
  */
 export function supportedOutputs(ext: SupportedExtension): OutputKind[] {
   const family = familyOf(ext);
 
   if (family === 'pdf') {
     return [
-      { type: 'pdf-tool', tool: 'pdf-merge' },
-      { type: 'pdf-tool', tool: 'pdf-split' },
-      { type: 'pdf-tool', tool: 'pdf-rotate', degrees: 90 },
-      { type: 'pdf-tool', tool: 'pdf-compress' },
+      // Conversions first: "convert my PDF" most often means "to Word".
       { type: 'doc-tool', tool: 'pdf-to-docx' },
       { type: 'doc-tool', tool: 'pdf-to-xlsx' },
       // Rasterization: convert.ts fans every PDF page out as image outputs.
       ...IMAGE_OUTPUTS.map((format) => ({ type: 'image', format }) as OutputKind),
+      { type: 'pdf-tool', tool: 'pdf-compress' },
+      { type: 'pdf-tool', tool: 'pdf-split' },
+      { type: 'pdf-tool', tool: 'pdf-rotate', degrees: 90 },
     ];
   }
 

@@ -151,3 +151,32 @@ describe('option coercion', () => {
     }
   });
 });
+
+describe('page lists', () => {
+  it('expands ranges in the order given, counting down when reversed', () => {
+    expect(parseNumberList('1, 4-6')).toEqual([1, 4, 5, 6]);
+    expect(parseNumberList('5 - 3, 9')).toEqual([5, 4, 3, 9]);
+  });
+
+  it('reports parts it cannot read instead of silently dropping them', () => {
+    // "1, 4-6" used to delete only page 1.
+    const tool = toolBySlug('delete-pages')!;
+    expect(validate(tool, { pages: '1, 4-6' })).toEqual({});
+    expect(validate(tool, { pages: '1, x' }).pages).toMatch(/Could not read "x"/);
+    expect(validate(tool, { pages: '3-' }).pages).toMatch(/Could not read "3-"/);
+    expect(buildOptions(tool, { pages: '2, 5-7' }).pages).toEqual([2, 5, 6, 7]);
+  });
+
+  it('refuses absurd ranges rather than expanding them', () => {
+    expect(parseNumberList('1-99999999')).toEqual([]);
+    expect(validate(toolBySlug('delete-pages')!, { pages: '1-99999999' }).pages).toBeTruthy();
+  });
+});
+
+describe('protect-pdf', () => {
+  it('offers no weak encryption choice', () => {
+    // The bundled qpdf refuses RC4, so 40- and 128-bit always failed.
+    const tool = toolBySlug('protect-pdf')!;
+    expect(tool.fields.map((f) => f.name)).toEqual(['password', 'ownerPassword']);
+  });
+});

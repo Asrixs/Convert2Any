@@ -23,15 +23,51 @@ const NUMERIC_FIELDS = new Set<keyof ToolOptions>([
   'fontSize',
   'startAt',
   'margin',
-  'keyLength',
 ]);
 
-/** Parse "3, 1, 2" into [3,1,2], ignoring anything that is not a number. */
-export function parseNumberList(value: string): number[] {
+/** A single range may not expand past this many pages ("1-99999999" is a typo). */
+const MAX_RANGE = 10_000;
+
+/** "3, 1  5 - 7" -> ["3", "1", "5-7"]: commas or spaces separate, dashes join. */
+function pageListParts(value: string): string[] {
   return value
+    .replace(/\s*-\s*/g, '-')
     .split(/[,\s]+/)
-    .map((part) => Number(part.trim()))
-    .filter((n) => Number.isInteger(n) && n > 0);
+    .filter((part) => part !== '');
+}
+
+function isPagePart(part: string): boolean {
+  const range = /^(\d+)-(\d+)$/.exec(part);
+  if (range) {
+    const from = Number(range[1]);
+    const to = Number(range[2]);
+    return from > 0 && to > 0 && Math.abs(to - from) < MAX_RANGE;
+  }
+  return /^\d+$/.test(part) && Number(part) > 0;
+}
+
+/**
+ * Parse "3, 1, 5-7" into [3, 1, 5, 6, 7], keeping the order given. A
+ * descending range counts down ("4-2" is 4, 3, 2), which is how you reverse
+ * pages in Reorder. Anything unreadable is skipped here; validate() reports
+ * it, so the user never has part of a list silently ignored.
+ */
+export function parseNumberList(value: string): number[] {
+  const pages: number[] = [];
+  for (const part of pageListParts(value)) {
+    if (!isPagePart(part)) continue;
+    const [fromText, toText = fromText] = part.split('-');
+    const from = Number(fromText);
+    const to = Number(toText);
+    const step = from <= to ? 1 : -1;
+    for (let n = from; n !== to + step; n += step) pages.push(n);
+  }
+  return pages;
+}
+
+/** The parts of a page list that are not a page number or a range. */
+export function unreadablePageParts(value: string): string[] {
+  return pageListParts(value).filter((part) => !isPagePart(part));
 }
 
 /** Coerce one field's raw form value to its pipeline type. */
@@ -77,8 +113,14 @@ export function validate(tool: Tool, values: Record<string, string>): Record<str
     }
     if (raw === '') continue;
 
-    if (NUMBER_LIST_FIELDS.has(field.name) && parseNumberList(raw).length === 0) {
-      errors[field.name] = 'Enter page numbers separated by commas, e.g. 3,1,2.';
+    if (NUMBER_LIST_FIELDS.has(field.name)) {
+      const unreadable = unreadablePageParts(raw);
+      if (unreadable.length > 0) {
+        errors[field.name] =
+          `Could not read "${unreadable[0]}". Use page numbers and ranges, e.g. 2, 5-7.`;
+      } else if (parseNumberList(raw).length === 0) {
+        errors[field.name] = 'Enter page numbers and ranges, e.g. 2, 5-7.';
+      }
     }
     if (field.type === 'number' || field.type === 'range') {
       const n = Number(raw);

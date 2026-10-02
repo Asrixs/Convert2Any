@@ -32,9 +32,18 @@ The conversion surface. Owns the job queue, runs the worker engine, and renders 
 | `disabled` | `boolean` | `false` | Blocks running while the tool form is invalid |
 | `allowEmpty` | `boolean` | `false` | Lets a tool run with no file (pasted HTML) |
 
-**Two modes.** In quick mode each file gets its own output picker, and dropping several PDFs also
-offers a single merge job. In tool mode the output kind and options come from the tool's form and
-the picker disappears.
+**Two modes.** In quick mode each file gets its own output picker; when several PDFs (or images)
+are queued, a button offers to combine them into one job — combining is never done implicitly. In
+tool mode the output kind and options come from the tool's form and the picker disappears.
+
+**Combining jobs.** Tools whose output combines files (Merge PDF, JPG to PDF) collect every added
+file into ONE pending job, even when files arrive in several goes. The job lists its files in
+order with move up / move down / remove controls; a merge with fewer than two files is held back
+with a hint. Every other tool — including the image converter, which accepts many files at once —
+converts each file as its own job.
+
+**Empty state.** Until a file is queued, the dropzone is the whole surface: the Convert and
+Download buttons appear only when there is something to act on.
 
 **Why refs, not state.** `File` handles and result `Blob`s live in refs: they are neither
 serialisable nor comparable, and keeping them out of reducer state avoids pointless re-renders.
@@ -124,10 +133,11 @@ reuses for its own API.
 `type="button"` is the default but is overridable, since `...rest` spreads after it.
 
 ### `Card`
-`variant`: `default | soft | flat | float`. `float` is the elevated hero/tool card.
+`variant`: `default | soft | flat | float`. `float` is the main working panel (the converter).
 
-### `Chip` / `ChipList`
-Small format tags. `accent` switches to the highlighted treatment.
+### `ToolCard`
+One tool in a grid — icon and fidelity badge, then name and summary; `showFormats` adds the
+input → output line. Shared by the home page, the catalog and "related tools".
 
 ### `FidelityBadge`
 Takes `level: Fidelity` and renders the tier with its explanation as a tooltip. Shown on every
@@ -142,10 +152,11 @@ seven pages without one.
 ### `FeatureItem`
 `icon`, `title`, `children`, and **`level: 2 | 3`** (default `3`).
 
-Same reasoning: these cards sit under a section heading on most pages (so `h3` is right) but
-directly under the page title on `/security`, where `h3` would skip a level.
+Same reasoning: these points sit under a section heading on most pages (so `h3` is right) but
+directly under the page title on `/security`, where `h3` would skip a level. They are grouped
+by space alone, with no box around each.
 
-### `Notice`, `Stat`, `Accordion`
+### `Notice`, `Accordion`
 `Notice` takes `tone: accent | error` and sets `role="alert"` when it is an error. `Accordion`
 is a native `<details>`/`<summary>`, so it works without JavaScript.
 
@@ -155,10 +166,10 @@ is a native `<details>`/`<summary>`, so it works without JavaScript.
 
 | Page | Route | Notes |
 | --- | --- | --- |
-| `Home` | `/` | Hero + floating dropzone, format catalog, tool grid, features, stats |
+| `Home` | `/` | Hero + converter, tool grid by category, three "why no server" points |
 | `Tools` | `/tools` | Full catalog grouped by category, with a fidelity key |
 | `ToolPage` | `/tools/:slug` | One component rendering all 19 tools from the catalog |
-| `Pricing` | `/pricing` | Free tier + Pro waitlist (stored locally; the page says so) |
+| `Pricing` | `/pricing` | Free tier, and Pro described as not built yet (links to GitHub) |
 | `Security` | `/security` | How the no-upload architecture works and how to verify it |
 | `Static` | `/about`, `/privacy`, `/terms`, `/contact` | Shared prose layout |
 | `NotFound` | fallback | Offers the tool list rather than a dead end |

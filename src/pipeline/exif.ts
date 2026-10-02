@@ -1,5 +1,5 @@
 import { IMAGE_FORMATS, type ImageOutputFormat } from './formats';
-import { encodeBitmap } from './encoders';
+import { encodeBitmap, paintForFormat } from './encoders';
 
 /**
  * Decision note — metadata stripping by construction:
@@ -28,21 +28,28 @@ export async function encodeStripped(
   quality = 85,
 ): Promise<Blob> {
   const def = IMAGE_FORMATS[format];
-  if (!def) throw new Error(`no-upload: unknown output format "${format}"`);
+  if (!def) throw new Error(`Convert2Any: unknown output format "${format}"`);
 
   // Native canvas encode: the bitmap holds upright raw pixels, so the fresh
   // encode carries no metadata by construction.
+  let native: Blob | null = null;
   try {
     const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('2D context unavailable');
-    ctx.drawImage(bitmap, 0, 0);
-    return await canvas.convertToBlob({
+    paintForFormat(ctx, bitmap, format);
+    native = await canvas.convertToBlob({
       type: def.mime,
       quality: format === 'png' ? undefined : quality / 100,
     });
   } catch {
-    // Canvas refused (older WebP support, exotic profiles): fall back to WASM.
-    return encodeBitmap(bitmap, format, quality);
+    native = null;
   }
+
+  // A browser that cannot encode the requested type does not throw: the canvas
+  // spec has it quietly return a PNG instead (Safari does this for WebP). Only
+  // keep the native result when it really is the format asked for; otherwise
+  // encode with WASM.
+  if (native && native.type === def.mime) return native;
+  return encodeBitmap(bitmap, format, quality);
 }

@@ -1,5 +1,6 @@
 import type { JSX } from 'preact';
 import type { Tool, ToolField } from '../tools/catalog';
+import { Icon } from './Icon';
 
 /**
  * Renders a tool's option fields from its catalog definition.
@@ -20,7 +21,7 @@ export function ToolForm({ tool, values, errors, onChange }: ToolFormProps): JSX
   if (tool.fields.length === 0) return null;
 
   return (
-    <div class="grid grid-2" role="group" aria-label={`${tool.title} options`}>
+    <div class="form-grid" role="group" aria-label={`${tool.title} options`}>
       {tool.fields.map((field) => (
         <Field
           key={field.name}
@@ -63,12 +64,7 @@ function Field({
     <div class="field" style={wrapperStyle}>
       <label class="field-label" for={id}>
         {field.label}
-        {field.required && (
-          <span style="color:var(--accent)" aria-hidden="true">
-            {' '}
-            *
-          </span>
-        )}
+        {field.required && <span class="field-required"> (required)</span>}
       </label>
 
       {field.type === 'select' ? (
@@ -137,6 +133,7 @@ function Field({
       )}
       {error && (
         <p class="field-error" id={errorId}>
+          <Icon name="close" size={14} />
           {error}
         </p>
       )}

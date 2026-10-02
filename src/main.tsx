@@ -2,7 +2,11 @@ import { hydrate, render } from 'preact';
 import { App } from './App';
 import { headElements, resetSeo } from './seo';
 import { toolPaths } from './tools/catalog';
+// Self-hosted, so the site still makes no third-party requests:
+// Inter for display, Open Sans for body text, Inconsolata for labels.
 import '@fontsource-variable/inter';
+import '@fontsource-variable/open-sans';
+import '@fontsource-variable/inconsolata';
 import './styles/tokens.css';
 import './styles/base.css';
 import './styles/components.css';

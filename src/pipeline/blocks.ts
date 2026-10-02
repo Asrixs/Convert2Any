@@ -44,11 +44,62 @@ const NAMED_ENTITIES: Record<string, string> = {
   copy: '©',
   reg: '®',
   trade: '™',
-  eacute: 'é',
-  egrave: 'è',
-  uuml: 'ü',
-  ouml: 'ö',
+  euro: '€',
+  pound: '£',
+  yen: '¥',
+  cent: '¢',
+  sect: '§',
+  para: '¶',
+  deg: '°',
+  plusmn: '±',
+  times: '×',
+  divide: '÷',
+  permil: '‰',
+  laquo: '«',
+  raquo: '»',
+  sbquo: '‚',
+  bdquo: '„',
+  dagger: '†',
+  Dagger: '‡',
+  iexcl: '¡',
+  iquest: '¿',
+  ensp: ' ',
+  emsp: ' ',
+  thinsp: ' ',
+  shy: '',
+  aacute: 'á',
+  Aacute: 'Á',
+  agrave: 'à',
+  Agrave: 'À',
+  acirc: 'â',
   auml: 'ä',
+  Auml: 'Ä',
+  aring: 'å',
+  Aring: 'Å',
+  aelig: 'æ',
+  AElig: 'Æ',
+  ccedil: 'ç',
+  Ccedil: 'Ç',
+  eacute: 'é',
+  Eacute: 'É',
+  egrave: 'è',
+  Egrave: 'È',
+  ecirc: 'ê',
+  euml: 'ë',
+  iacute: 'í',
+  iuml: 'ï',
+  ntilde: 'ñ',
+  Ntilde: 'Ñ',
+  oacute: 'ó',
+  ocirc: 'ô',
+  ouml: 'ö',
+  Ouml: 'Ö',
+  oslash: 'ø',
+  Oslash: 'Ø',
+  uacute: 'ú',
+  uuml: 'ü',
+  Uuml: 'Ü',
+  szlig: 'ß',
 };
 
 /** Decode the entity forms that actually appear in real documents. */
@@ -64,9 +115,19 @@ export function decodeEntities(text: string): string {
         return whole;
       }
     }
-    return NAMED_ENTITIES[body.toLowerCase()] ?? whole;
+    // Entity names are case-sensitive (&Eacute; is É, &eacute; is é); the
+    // lowercase fallback only rescues shouty spellings such as &AMP;.
+    return NAMED_ENTITIES[body] ?? NAMED_ENTITIES[body.toLowerCase()] ?? whole;
   });
 }
+
+/**
+ * Elements whose text is never page content: code, styles, the document
+ * <title> (it belongs in the browser tab, not on the page), inert templates,
+ * and SVG labels.
+ * <head> itself is not listed because its closing tag may be omitted.
+ */
+const SKIPPED_TAGS = new Set(['script', 'style', 'title', 'template', 'noscript', 'svg']);
 
 const BLOCK_TAGS = new Set([
   'p',
@@ -212,7 +273,9 @@ export function parseHtmlBlocks(html: string): Block[] {
 
     const { name, closing } = token;
 
-    if (name === 'script' || name === 'style') {
+    if (SKIPPED_TAGS.has(name)) {
+      // A self-closing <svg/> has no content to skip and no end tag to wait for.
+      if (!closing && token.text.endsWith('/')) continue;
       skipDepth += closing ? -1 : 1;
       if (skipDepth < 0) skipDepth = 0;
       continue;

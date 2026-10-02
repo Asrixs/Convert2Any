@@ -132,6 +132,19 @@ describe('watermarkPdf', () => {
   it('requires text', async () => {
     await expect(watermarkPdf(await makePdf(1), { text: '  ' })).rejects.toThrow(/required/);
   });
+
+  it('names the characters the built-in font cannot draw', async () => {
+    // pdf-lib used to fail deep inside with "WinAnsi cannot encode …".
+    await expect(watermarkPdf(await makePdf(1), { text: 'Vertrouwelijk 機密' })).rejects.toThrow(
+      /cannot draw \(機 密\)/,
+    );
+  });
+
+  it('stamps rotated pages too', async () => {
+    const rotated = blobOf(await rotatePdf(await makePdf(1), 90));
+    const out = await watermarkPdf(rotated, { text: 'DRAFT', position: 'top-left' });
+    expect(drawnText(out)).toContain('DRAFT');
+  });
 });
 
 describe('numberPdf', () => {

@@ -139,4 +139,3 @@ image tools silently.
 2. Deep-link straight to `/tools/protect-pdf`. It should render without a redirect through `/`.
 3. Visit a path that does not exist. You should get the in-app 404, not the host's error page.
 4. Check `/sitemap.xml` lists 27 URLs on your domain.
-5. Disconnect from the network after the page loads and convert something — it should still work.

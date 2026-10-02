@@ -17,6 +17,7 @@ export type QueueAction =
   | { type: 'status'; id: string; status: JobStatus; error?: string }
   | { type: 'outputs'; id: string; names: string[] }
   | { type: 'set-kind'; id: string; kind: OutputKind }
+  | { type: 'set-files'; id: string; name: string; size: number; fileNames: string[] }
   | { type: 'remove'; id: string }
   | { type: 'clear-finished' };
 
@@ -63,6 +64,18 @@ export function queueReducer(state: QueueState, action: QueueAction): QueueState
         if (job.id !== action.id || job.status !== 'pending') return job;
         changed = true;
         return { ...job, kind: action.kind };
+      });
+      return changed ? { ...state, jobs } : state;
+    }
+
+    // A combining job gains files or has them reordered — only before it runs,
+    // so the files a running job reads can never change underneath it.
+    case 'set-files': {
+      let changed = false;
+      const jobs = state.jobs.map((job) => {
+        if (job.id !== action.id || job.status !== 'pending') return job;
+        changed = true;
+        return { ...job, name: action.name, size: action.size, fileNames: action.fileNames };
       });
       return changed ? { ...state, jobs } : state;
     }

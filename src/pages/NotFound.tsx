@@ -1,5 +1,4 @@
 import type { JSX } from 'preact';
-import { Icon } from '../components/Icon';
 import { TOOLS } from '../tools/catalog';
 import { useSeo } from '../seo';
 
@@ -12,16 +11,18 @@ export function NotFound(): JSX.Element {
 
   return (
     <section class="section">
-      <div class="page center stack" style="gap:var(--s-5);align-items:center">
-        <span class="icon-badge">
-          <Icon name="close" size={22} />
-        </span>
-        <h1 style="font-size:var(--t-4xl)">Page not found</h1>
-        <p class="lead" style="margin-inline:auto">
-          That address does not match anything on Convert2Any. The tool you want is probably one of
-          these {TOOLS.length}.
-        </p>
-        <div class="row" style="justify-content:center">
+      <div class="page center" style="max-width:640px">
+        <div class="heading-block">
+          <p class="eyebrow" style="margin-bottom:var(--s-2)">
+            Error 404
+          </p>
+          <h1 style="font-size:var(--t-4xl)">Page not found</h1>
+          <p class="lead" style="margin-inline:auto">
+            That address does not match anything on Convert2Any. The tool you want is probably one
+            of these {TOOLS.length}.
+          </p>
+        </div>
+        <div class="row" style="justify-content:center;margin-top:var(--s-6)">
           <a class="btn btn-primary" href="/tools">
             Browse all tools
           </a>

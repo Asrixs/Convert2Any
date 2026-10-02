@@ -11,6 +11,9 @@ import { CATEGORIES, toolsByCategory } from '../tools/catalog';
  * tap that changes route never leaves the panel covering the page.
  */
 
+/** The project's public repository — the proof behind "there is no server". */
+export const SOURCE_URL = 'https://github.com/Asrixs/Convert2Any';
+
 const NAV = [
   { href: '/tools', label: 'Tools' },
   { href: '/pricing', label: 'Pricing' },
@@ -39,12 +42,14 @@ export function Layout({ children }: { children: ComponentChildren }): JSX.Eleme
         <div class="page nav-inner">
           <a class="brand" href="/">
             <Icon name="layers" size={22} class="brand-mark" />
-            Convert<span class="brand-mark">2</span>Any
+            <span>
+              Convert<span class="brand-mark">2</span>Any
+            </span>
           </a>
 
           <button
             type="button"
-            class="nav-toggle"
+            class="btn btn-sm btn-icon nav-toggle"
             aria-expanded={open}
             aria-controls="primary-nav"
             aria-label={open ? 'Close menu' : 'Open menu'}
@@ -66,7 +71,7 @@ export function Layout({ children }: { children: ComponentChildren }): JSX.Eleme
               </li>
             ))}
             <li>
-              <a class="btn btn-sm" href="/#convert" style="margin-left:var(--s-2)">
+              <a class="btn nav-cta" href="/#convert">
                 Start converting
               </a>
             </li>
@@ -92,12 +97,17 @@ function Footer(): JSX.Element {
           <div class="stack" style="gap:var(--s-3)">
             <a class="brand" href="/">
               <Icon name="layers" size={20} class="brand-mark" />
-              Convert<span class="brand-mark">2</span>Any
+              <span>
+                Convert<span class="brand-mark">2</span>Any
+              </span>
             </a>
             <p class="small muted" style="max-width:34ch">
-              File conversion that runs entirely in your browser. No uploads, no accounts, no
-              queue.
+              File conversion that runs entirely in your browser. No uploads, no accounts,
+              no queue.
             </p>
+            <a class="text-link" href={SOURCE_URL} rel="noopener">
+              Source on GitHub <Icon name="arrow-right" size={14} />
+            </a>
           </div>
 
           <nav aria-labelledby="footer-edit">
@@ -148,8 +158,8 @@ function Footer(): JSX.Element {
         </div>
 
         <div class="footer-bottom">
-          <span>© {new Date().getFullYear()} Convert2Any</span>
-          <span>Built as a static site — every conversion runs on your device.</span>
+          <span>© {new Date().getFullYear()} Convert2Any · MIT licensed</span>
+          <span>A static site — every conversion runs on your device.</span>
         </div>
       </div>
     </footer>

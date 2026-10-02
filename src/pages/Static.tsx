@@ -1,6 +1,6 @@
 import type { JSX } from 'preact';
-import { Icon } from '../components/Icon';
-import { Card, FeatureItem, SectionHead } from '../components/ui';
+import { SOURCE_URL } from '../components/Layout';
+import { FeatureItem, SectionHead } from '../components/ui';
 import { TOOLS } from '../tools/catalog';
 import { useSeo } from '../seo';
 
@@ -14,19 +14,17 @@ import { useSeo } from '../seo';
 
 function Prose({
   title,
-  eyebrow,
   lead,
   children,
 }: {
   title: string;
-  eyebrow: string;
   lead: string;
   children: JSX.Element | JSX.Element[];
 }): JSX.Element {
   return (
     <section class="section">
-      <div class="page page-narrow stack" style="gap:var(--s-6)">
-        <SectionHead eyebrow={eyebrow} title={title} lead={lead} level={1} />
+      <div class="page page-narrow stack" style="gap:var(--s-7)">
+        <SectionHead title={title} lead={lead} level={1} />
         <div class="prose">{children}</div>
       </div>
     </section>
@@ -45,9 +43,8 @@ export function About(): JSX.Element {
 
   return (
     <section class="section">
-      <div class="page stack" style="gap:var(--s-7)">
+      <div class="page stack" style="gap:var(--s-8)">
         <SectionHead
-          eyebrow="About"
           title="Built the awkward way, on purpose"
           level={1}
           lead="Convert2Any is a file converter with no backend. That decision makes some things impossible and everything else private."
@@ -94,11 +91,11 @@ export function About(): JSX.Element {
           </p>
         </div>
 
-        <div class="grid grid-3">
+        <div class="grid grid-3" style="gap:var(--s-6)">
           <FeatureItem icon="shield" title="No accounts">
             Nothing to sign up for, so there is no profile, no history and no password to leak.
           </FeatureItem>
-          <FeatureItem icon="offline" title="No telemetry">
+          <FeatureItem icon="check" title="No telemetry">
             No analytics scripts and no error reporting. We do not know which tools you use.
           </FeatureItem>
           <FeatureItem icon="layers" title={`${TOOLS.length} tools`}>
@@ -122,7 +119,6 @@ export function Privacy(): JSX.Element {
 
   return (
     <Prose
-      eyebrow="Privacy"
       title="We collect nothing"
       lead="This is a short page because there is very little to describe."
     >
@@ -135,10 +131,8 @@ export function Privacy(): JSX.Element {
 
       <h2>Personal data</h2>
       <p>
-        Convert2Any has no accounts, no sign-up and no login. We do not ask for your name or email
-        to use any tool. If you join the Pro waitlist on the pricing page, that address is written
-        to your own browser's local storage and never sent anywhere — there is no server to receive
-        it.
+        Convert2Any has no accounts, no sign-up and no login. It never asks for your name or email
+        address, and there is no server that could receive them.
       </p>
 
       <h2>Analytics and cookies</h2>
@@ -156,8 +150,8 @@ export function Privacy(): JSX.Element {
 
       <h2>What your browser stores</h2>
       <p>
-        Two things, both local and both removable by clearing site data: a waitlist address if you
-        chose to enter one, and the browser's ordinary cache of the site's own assets.
+        Only the browser's ordinary cache of the site's own code and fonts, which clearing site
+        data removes.
       </p>
 
       <h2>Changes</h2>
@@ -180,7 +174,6 @@ export function Terms(): JSX.Element {
 
   return (
     <Prose
-      eyebrow="Terms"
       title="Terms of use"
       lead="Plain language, because these should be readable."
     >
@@ -216,7 +209,8 @@ export function Terms(): JSX.Element {
       <h2>Availability</h2>
       <p>
         The site is static and may be taken offline, moved or changed at any time without notice.
-        Because conversions run locally, a copy of the site works offline once loaded.
+        Because it is a folder of static files under the MIT licence, you can also host your own
+        copy.
       </p>
     </Prose>
   );
@@ -231,60 +225,42 @@ export function Contact(): JSX.Element {
     path: '/contact',
   });
 
+  const issues = `${SOURCE_URL}/issues`;
+
   return (
     <section class="section">
-      <div class="page page-narrow stack" style="gap:var(--s-6)">
+      <div class="page page-narrow stack" style="gap:var(--s-8)">
         <SectionHead
-          eyebrow="Contact"
           title="Get in touch"
           level={1}
-          lead="There is no contact form here, for the same reason there is no upload: a form with no server behind it would only pretend to send."
+          lead="There is no contact form here, for the same reason there is no upload: a form with no server behind it would only pretend to send. Everything goes through GitHub instead."
         />
 
-        <div class="grid grid-2">
-          <Card>
-            <div class="stack" style="gap:var(--s-3)">
-              <span class="icon-badge">
-                <Icon name="shield" size={20} />
-              </span>
-              <span class="card-title">Security issues</span>
-              <p class="small muted">
-                Found a way for a file to leave the browser, or a flaw in how encryption is
-                applied? Please report it privately before disclosing publicly, with the browser,
-                the steps and the file type involved.
-              </p>
-            </div>
-          </Card>
-
-          <Card>
-            <div class="stack" style="gap:var(--s-3)">
-              <span class="icon-badge">
-                <Icon name="bolt" size={20} />
-              </span>
-              <span class="card-title">Bugs and formats</span>
-              <p class="small muted">
-                A conversion that produced something wrong is worth reporting — especially if you
-                can describe the source document. Format requests are welcome too, though anything
-                needing a server will be declined for the reasons on the about page.
-              </p>
-            </div>
-          </Card>
+        <div class="grid grid-2" style="gap:var(--s-6)">
+          <FeatureItem level={2} icon="bolt" title="Bugs and formats">
+            A conversion that produced something wrong is worth reporting — especially if you can
+            describe the source document. Format requests are welcome too, though anything that
+            needs a server will be declined for the reasons on the about page.{' '}
+            <a href={issues} rel="noopener">
+              Open an issue
+            </a>
+            .
+          </FeatureItem>
+          <FeatureItem level={2} icon="shield" title="Security issues">
+            Found a way for a file to leave the browser, or a flaw in how encryption is applied?
+            Please do not post the details publicly.{' '}
+            <a href={issues} rel="noopener">
+              Open an issue
+            </a>{' '}
+            saying you have a security report, and a private channel will be arranged.
+          </FeatureItem>
         </div>
 
-        <Card variant="soft">
-          <div class="stack" style="gap:var(--s-3)">
-            <span class="card-title">Before you write</span>
-            <p class="small muted">
-              Please check the tool's own page first. Most surprises are the documented fidelity
-              limits — a Word file losing its fonts, or a scanned PDF yielding no text — and each
-              of those is explained where it happens.
-            </p>
-            <p class="small muted">
-              Replace this section with your own email address or issue tracker link when you
-              deploy the site.
-            </p>
-          </div>
-        </Card>
+        <p class="muted" style="max-width:68ch">
+          Before you write, please check the tool's own page. Most surprises are the documented
+          fidelity limits — a Word file losing its fonts, or a scanned PDF yielding no text — and
+          each of those is explained where it happens.
+        </p>
       </div>
     </section>
   );
