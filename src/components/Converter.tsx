@@ -82,7 +82,9 @@ function groupName(count: number, kind: OutputKind): string {
 
 /** A merge of fewer than two files would just copy the file. */
 function needsMoreFiles(job: Job): boolean {
-  return job.status === 'pending' && isMergeKind(job.kind) && (job.fileNames?.length ?? 0) < 2;
+  return (
+    job.status === 'pending' && isMergeKind(job.kind) && (job.fileNames?.length ?? 0) < 2
+  );
 }
 
 let localId = 0;
@@ -172,7 +174,9 @@ export function Converter({
       const kind = tool.toKind(optionsRef.current ?? {});
       if (isGroupingKind(kind)) {
         // Files added in several goes still form ONE merge, in the order added.
-        const open = jobsRef.current.find((job) => job.status === 'pending' && job.fileNames);
+        const open = jobsRef.current.find(
+          (job) => job.status === 'pending' && job.fileNames,
+        );
         if (open) {
           setGroupFiles(open, [...(filesRef.current.get(open.id) ?? []), ...files]);
         } else {
@@ -227,7 +231,10 @@ export function Converter({
     if (!tool) return;
     const kind = tool.toKind(currentOptions);
     const id = nextId();
-    dispatch({ type: 'enqueue', jobs: [{ id, name: tool.title, size: 0, status: 'pending', kind }] });
+    dispatch({
+      type: 'enqueue',
+      jobs: [{ id, name: tool.title, size: 0, status: 'pending', kind }],
+    });
     dispatch({ type: 'status', id, status: 'converting' });
     try {
       const outputs = await engine.convert([], kind, qualityRef.current);
@@ -264,7 +271,12 @@ export function Converter({
       runnable.map(async (job) => {
         const files = filesRef.current.get(job.id);
         if (!files || files.length === 0) {
-          dispatch({ type: 'status', id: job.id, status: 'error', error: 'File handle lost' });
+          dispatch({
+            type: 'status',
+            id: job.id,
+            status: 'error',
+            error: 'File handle lost',
+          });
           return;
         }
         dispatch({ type: 'status', id: job.id, status: 'converting' });
@@ -286,7 +298,12 @@ export function Converter({
           dispatch({ type: 'status', id: job.id, status: 'done' });
           dispatch({ type: 'outputs', id: job.id, names: outputs.map((o) => o.name) });
         } catch (err) {
-          dispatch({ type: 'status', id: job.id, status: 'error', error: userFacingMessage(err) });
+          dispatch({
+            type: 'status',
+            id: job.id,
+            status: 'error',
+            error: userFacingMessage(err),
+          });
         }
       }),
     );
@@ -313,9 +330,13 @@ export function Converter({
   }
 
   const doneOutputs = (): OutputBlob[] =>
-    jobs.flatMap((job) => (job.status === 'done' ? (outputsRef.current.get(job.id) ?? []) : []));
+    jobs.flatMap((job) =>
+      job.status === 'done' ? (outputsRef.current.get(job.id) ?? []) : [],
+    );
 
-  const runnableCount = jobs.filter((j) => j.status === 'pending' && !needsMoreFiles(j)).length;
+  const runnableCount = jobs.filter(
+    (j) => j.status === 'pending' && !needsMoreFiles(j),
+  ).length;
   const hasDone = jobs.some((j) => j.status === 'done');
   const doneCount = jobs.filter((j) => j.status === 'done').length;
   const errorCount = jobs.filter((j) => j.status === 'error').length;
@@ -329,7 +350,9 @@ export function Converter({
         onFiles={addFiles}
         accept={accept}
         multiple={tool ? tool.multiple : true}
-        title={tool ? `Choose ${tool.multiple ? 'files' : 'a file'}` : 'Choose files to convert'}
+        title={
+          tool ? `Choose ${tool.multiple ? 'files' : 'a file'}` : 'Choose files to convert'
+        }
         hint={
           tool
             ? `or drop ${tool.multiple ? 'them' : 'it'} here · ${tool.accepts.map((e) => e.toUpperCase()).join(', ')}`
@@ -347,11 +370,18 @@ export function Converter({
       {jobs.length > 0 && (
         <ul class="queue" data-testid="queue" aria-label="Queued files">
           {jobs.map((job) => (
-            <li key={job.id} class="queue-item" data-testid="job-row" data-status={job.status}>
+            <li
+              key={job.id}
+              class="queue-item"
+              data-testid="job-row"
+              data-status={job.status}
+            >
               <div class="queue-main">
                 <div class="queue-title">
                   <span class="queue-name">{job.name}</span>
-                  <span class={`status status-${job.status}`}>{STATUS_LABEL[job.status]}</span>
+                  <span class={`status status-${job.status}`}>
+                    {STATUS_LABEL[job.status]}
+                  </span>
                 </div>
                 <div class="queue-meta">
                   {job.size > 0 && <span>{formatBytes(job.size)}</span>}
@@ -445,7 +475,9 @@ export function Converter({
                       size="sm"
                       icon="download"
                       data-testid="download-one"
-                      onClick={() => void downloadBlobs(outputsRef.current.get(job.id) ?? [])}
+                      onClick={() =>
+                        void downloadBlobs(outputsRef.current.get(job.id) ?? [])
+                      }
                     >
                       Save
                     </Button>
@@ -516,26 +548,37 @@ export function Converter({
         </Notice>
       )}
 
-      <div class="converter-actions">
-        <Button
-          variant="primary"
-          data-testid="run-all"
-          disabled={!canRun}
-          onClick={() => void runAll()}
-        >
-          {running ? 'Converting…' : runnableCount > 1 ? `Convert ${runnableCount} files` : 'Convert'}
-        </Button>
-        {hasDone && (
-          <Button icon="download" data-testid="download-all" onClick={() => void downloadBlobs(doneOutputs())}>
-            {doneCount > 1 ? 'Download all (.zip)' : 'Download'}
+      {/* Nothing to act on yet: the dropzone alone is the empty state. */}
+      {(jobs.length > 0 || allowEmpty) && (
+        <div class="converter-actions">
+          <Button
+            variant="primary"
+            data-testid="run-all"
+            disabled={!canRun}
+            onClick={() => void runAll()}
+          >
+            {running
+              ? 'Converting…'
+              : runnableCount > 1
+                ? `Convert ${runnableCount} files`
+                : 'Convert'}
           </Button>
-        )}
-        {hasFinished && (
-          <Button variant="ghost" data-testid="clear-finished" onClick={clearFinished}>
-            Clear finished
-          </Button>
-        )}
-      </div>
+          {hasDone && (
+            <Button
+              icon="download"
+              data-testid="download-all"
+              onClick={() => void downloadBlobs(doneOutputs())}
+            >
+              {doneCount > 1 ? 'Download all (.zip)' : 'Download'}
+            </Button>
+          )}
+          {hasFinished && (
+            <Button variant="ghost" data-testid="clear-finished" onClick={clearFinished}>
+              Clear finished
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

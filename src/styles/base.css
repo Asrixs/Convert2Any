@@ -1,4 +1,4 @@
-/** Reset, document defaults, and shared primitives. */
+/** Reset, document defaults, and shared layout and type primitives. */
 
 *,
 *::before,
@@ -9,6 +9,8 @@
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
+  /* Anchors land below the sticky navigation, not underneath it. */
+  scroll-padding-top: 80px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -31,16 +33,9 @@ body {
   color: var(--text);
   font-family: var(--font);
   font-size: var(--t-base);
-  line-height: 1.65;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* The hero glow, painted once on the page rather than in a wrapper. */
-  background-image: radial-gradient(
-    ellipse 80% 50% at 50% -10%,
-    rgb(149 1 1 / 28%),
-    transparent 70%
-  );
-  background-repeat: no-repeat;
 }
 
 h1,
@@ -49,12 +44,19 @@ h3,
 h4,
 h5,
 h6 {
-  color: var(--text-strong);
-  font-weight: 700;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-weight: 650;
   letter-spacing: -0.02em;
-  line-height: 1.15;
+  line-height: 1.2;
   margin: 0;
   text-wrap: balance;
+}
+
+h1 {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
 }
 
 p {
@@ -63,14 +65,15 @@ p {
 }
 
 a {
-  color: var(--text-strong);
-  text-decoration-color: var(--accent-dim);
+  color: var(--text);
+  text-decoration-color: var(--border-strong);
+  text-decoration-thickness: 1px;
   text-underline-offset: 3px;
-  transition: color var(--speed) var(--ease);
+  transition: text-decoration-color var(--speed) var(--ease);
 }
 
 a:hover {
-  color: var(--accent);
+  text-decoration-color: currentColor;
 }
 
 img,
@@ -94,11 +97,15 @@ textarea {
   color: inherit;
 }
 
-/* A single, unmistakable focus treatment everywhere. */
+/*
+ * One focus treatment everywhere: a 2px ring, 2px clear of the element, in
+ * the accent colour (4.6:1 on the light page, 6.5:1 on the dark one). It
+ * appears instantly — focus is orientation, not decoration.
+ */
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
-  border-radius: var(--r-xs);
+  transition: none;
 }
 
 :focus:not(:focus-visible) {
@@ -106,29 +113,8 @@ textarea {
 }
 
 ::selection {
-  background: var(--c-red-deep);
-  color: var(--c-white);
-}
-
-/* Scrollbars, styled to match rather than punching a light hole in the page. */
-* {
-  scrollbar-color: var(--c-red-deep) var(--c-black);
-  scrollbar-width: thin;
-}
-
-*::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-*::-webkit-scrollbar-track {
-  background: var(--c-black);
-}
-
-*::-webkit-scrollbar-thumb {
-  background: var(--c-red-deep);
-  border: 2px solid var(--c-black);
-  border-radius: var(--r-pill);
+  background: var(--text);
+  color: var(--bg);
 }
 
 /* ---------------------------------------------------------------- a11y */
@@ -151,17 +137,17 @@ textarea {
   left: var(--s-2);
   z-index: 100;
   padding: var(--s-3) var(--s-4);
-  background: var(--accent);
-  color: var(--c-white);
-  font-weight: 700;
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 600;
   border-radius: var(--r-sm);
+  text-decoration: none;
   transform: translateY(-200%);
-  transition: transform var(--speed) var(--ease);
 }
 
 .skip-link:focus {
   transform: translateY(0);
-  color: var(--c-white);
+  color: var(--bg);
 }
 
 /* --------------------------------------------------------------- layout */
@@ -177,6 +163,7 @@ textarea {
   max-width: var(--page-narrow);
 }
 
+/* Sections share equal top and bottom padding at every width. */
 .section {
   padding-block: var(--s-9);
 }
@@ -208,31 +195,34 @@ textarea {
 }
 
 .grid-2 {
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
 }
 
 .grid-3 {
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
 }
 
 .grid-4 {
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
 }
 
 /* ----------------------------------------------------------- typography */
 
+/* Small caps-style label in the mono face: section eyebrows, column heads. */
 .eyebrow {
-  color: var(--accent);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
   font-size: var(--t-xs);
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .lead {
-  color: var(--text);
+  color: var(--text-muted);
   font-size: var(--t-lg);
-  max-width: 62ch;
+  line-height: 1.55;
+  max-width: 60ch;
 }
 
 .muted {
@@ -245,17 +235,14 @@ textarea {
 
 .mono {
   font-family: var(--font-mono);
-  font-size: 0.9em;
+}
+
+/* A heading followed by its paragraph: the heading owns the space below it. */
+.heading-block > :is(h1, h2, h3) {
+  margin-bottom: var(--s-6);
 }
 
 @media (width <= 640px) {
-  :root {
-    --t-4xl: 2.25rem;
-    --t-5xl: 2.75rem;
-    --s-9: 64px;
-    --s-10: 80px;
-  }
-
   .page {
     padding-inline: var(--s-4);
   }

@@ -4,8 +4,8 @@
   "description": "Convert, edit and secure files entirely in your browser.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "background_color": "#f4f4f1",
+  "theme_color": "#f4f4f1",
   "icons": [
     {
       "src": "/favicon.svg",

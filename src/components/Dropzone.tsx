@@ -25,8 +25,8 @@ export function Dropzone({
   onFiles,
   accept,
   multiple = true,
-  title = 'Select your file to convert',
-  hint = 'or drop it here.',
+  title = 'Choose a file',
+  hint = 'or drop it here',
   disabled = false,
 }: DropzoneProps): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -64,9 +64,9 @@ export function Dropzone({
       }}
       onDrop={handleDrop}
     >
-      <Icon name="upload" size={32} class="dropzone-icon" />
+      <Icon name="upload" size={28} class="dropzone-icon" />
       <span class="dropzone-title">{dragging ? 'Drop to add' : title}</span>
-      <span class="small muted">{hint}</span>
+      <span class="dropzone-hint">{hint}</span>
 
       <input
         ref={inputRef}

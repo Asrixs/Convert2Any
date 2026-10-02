@@ -1,90 +1,64 @@
 /**
- * Convert2Any design tokens.
+ * Convert2Any design tokens — TypeUI "Minimal".
  *
- * The four brand hex codes are used exactly as specified in the brief. Every
- * other value in the system is derived from them (mixes, alphas) rather than
- * introduced as a new colour, so the palette stays strictly on-brand.
+ * Intent: a quiet, near-monochrome tool where the file and the Convert button
+ * are the only things asking for attention.
  *
- * Contrast, measured against WCAG 2.1:
- *   #FFFFFF on #000000 -> 21.0:1   (AAA)
- *   #E0E0E0 on #000000 -> 16.6:1   (AAA)
- *   #E0E0E0 on #3D0000 -> 13.9:1   (AAA)
- *   #FF0000 on #000000 ->  5.3:1   (AA, normal text)
- *   #FFFFFF on #FF0000 ->  4.0:1   (AA for LARGE text only)
- * The last pairing is why primary CTA labels are 20px/700: WCAG counts bold
- * text as "large" only from 18.66px, so 20px clears the 3:1 large-text bar
- * properly rather than sitting just beneath the 4.5:1 normal-text one.
+ * Foundations come from the TypeUI Minimal design skill (bergside/
+ * awesome-design-skills, MIT): text #0C0C09, surface #F4F4F1, Inter for
+ * display, Open Sans for body, Inconsolata for labels, 4/8/12/16/24/32
+ * spacing, 4px and 8px radii. Red is the brand's single accent and is spent
+ * only on the primary action, focus rings and a few small brand marks.
+ *
+ * Contrast (WCAG 2.2), light / dark:
+ *   text on page            17.8:1 / 17.8:1
+ *   text on panel           19.6:1 / 16.5:1
+ *   muted text on page       5.9:1 /  7.7:1
+ *   muted text on panel      6.5:1 /  7.1:1
+ *   control boundary         3.5:1 /  3.5:1   (SC 1.4.11 asks 3:1)
+ *   white on the red button  5.0:1            (AA at normal size — no
+ *                                              oversized label needed)
+ *   red text / focus ring    4.6:1 /  6.5:1   (on the page)
+ *   ok / warn / error text   5.0 / 5.0 / 6.5 : 1 light, all > 6.5:1 dark
+ * Red text is never placed on --surface-muted (4.25:1).
  */
 
 :root {
-  /* ---- Brand palette: the four specified colours, unmodified ---- */
-  --c-black: #000000;
-  --c-maroon: #3d0000;
-  --c-red-deep: #950101;
-  --c-red: #ff0000;
-  --c-white: #ffffff;
-  --c-gray: #e0e0e0;
-
-  /* ---- Semantic surfaces ---- */
-  --bg: var(--c-black);
-  /* Sections that need separation from pure black without leaving the ramp. */
-  --bg-raised: #0a0000;
-  --surface: var(--c-maroon);
-  --surface-soft: #250000;
-  --surface-hover: #4d0000;
+  /* ---- Surfaces ---- */
+  --bg: #f4f4f1;
+  --surface: #ffffff;
+  --surface-muted: #ecece7;
+  /* Form fields sit on panels; a different fill keeps them visible at rest. */
+  --field: #f4f4f1;
 
   /* ---- Text ---- */
-  --text: var(--c-gray);
-  --text-strong: var(--c-white);
-  --text-muted: #9a8a8a;
-  --text-on-accent: var(--c-white);
+  --text: #0c0c09;
+  --text-muted: #5e5e57;
+  --text-on-accent: #ffffff;
 
   /* ---- Lines ---- */
-  --border: #2a0505;
-  --border-strong: var(--c-red-deep);
-  --border-subtle: rgb(255 255 255 / 8%);
+  --border: #e2e2dc;
+  /* Boundaries of interactive controls: at least 3:1 against their ground. */
+  --border-strong: #8a8a82;
 
-  /* ---- Accents ---- */
-  --accent: var(--c-red);
-  --accent-strong: #ff3333;
-  --accent-dim: var(--c-red-deep);
-  --accent-glow: rgb(255 0 0 / 18%);
-  --accent-wash: rgb(255 0 0 / 8%);
+  /* ---- Accent: the brand red, darkened from #FF0000 so white text passes AA ---- */
+  --accent: #e00000;
+  --accent-hover: #c20000;
+  --accent-text: #e00000;
+  --focus: #e00000;
 
-  /*
-   * Accent TEXT sitting on an elevated surface.
-   *
-   * #FF0000 reads fine on black (5.25:1) but drops to 4.38:1 on #3D0000 —
-   * under the 4.5:1 AA bar for normal text. Chips and badges are worse still,
-   * because their --accent-wash fill lightens the ground beneath them.
-   * Measured on that washed maroon: #FF3333 gives 4.41:1 (still short),
-   * #FF4D4D gives 4.90:1. Hence this value.
-   * Pure #FF0000 is kept everywhere it passes: on black, and as the CTA fill.
-   */
-  --accent-text: #ff4d4d;
+  /* ---- Status (text-safe shades; each state also carries a label) ---- */
+  --ok: #15803d;
+  --warn: #b45309;
+  --err: #b91c1c;
+  --idle: #8a8a82;
 
-  /*
-   * Form-control boundary. #950101 against a field's own background is
-   * 2.23:1, below the 3:1 that WCAG 1.4.11 asks of a control's visible
-   * boundary, so inputs get this brighter red while #950101 stays the border
-   * for non-interactive surfaces.
-   */
-  --border-input: #b81a1a;
-
-  /* ---- Status ---- */
-  --ok: #4ade80;
-  --warn: #fbbf24;
-  --err: #ff5252;
-
-  /* ---- Radii: soft geometry to balance the hard palette ---- */
-  --r-xs: 6px;
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 20px;
-  --r-xl: 28px;
+  /* ---- Radii: TypeUI Minimal sm/md ---- */
+  --r-sm: 4px;
+  --r-md: 8px;
   --r-pill: 999px;
 
-  /* ---- Spacing: 8px scale ---- */
+  /* ---- Spacing: 4pt grid; 4–32 from the design skill, 48+ for page rhythm ---- */
   --s-1: 4px;
   --s-2: 8px;
   --s-3: 12px;
@@ -94,48 +68,79 @@
   --s-7: 48px;
   --s-8: 64px;
   --s-9: 96px;
-  --s-10: 128px;
 
   /* ---- Type ---- */
-  --font: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace;
+  --font-display: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font: 'Open Sans Variable', 'Open Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Inconsolata Variable', 'Inconsolata', ui-monospace, Consolas, monospace;
 
   --t-xs: 0.75rem;
   --t-sm: 0.875rem;
   --t-base: 1rem;
   --t-lg: 1.125rem;
-  --t-xl: 1.375rem;
-  --t-2xl: 1.75rem;
-  --t-3xl: 2.25rem;
-  --t-4xl: 3rem;
-  --t-5xl: 4rem;
+  --t-xl: 1.25rem;
+  --t-2xl: 1.5rem;
+  --t-3xl: 2rem;
+  --t-4xl: 2.5rem;
+  --t-5xl: 3rem;
 
-  /* ---- Depth ---- */
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 60%);
-  --shadow-md: 0 8px 24px rgb(0 0 0 / 55%);
-  --shadow-lg: 0 24px 64px rgb(0 0 0 / 70%);
-  --shadow-accent: 0 12px 40px rgb(255 0 0 / 15%);
+  /* ---- Controls ---- */
+  --control-h: 44px;
+  --control-h-sm: 36px;
+
+  /* ---- Depth: used once, for the mobile menu panel ---- */
+  --shadow-float: 0 12px 32px rgb(12 12 9 / 12%);
 
   /* ---- Layout ---- */
-  --page: 1200px;
-  --page-narrow: 760px;
+  --page: 1120px;
+  --page-narrow: 720px;
 
-  --ease: cubic-bezier(0.16, 1, 0.3, 1);
-  --speed: 180ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --speed: 150ms;
+
+  color-scheme: light;
 }
 
-/**
- * The brief specifies a strict dark theme, so the palette does not invert for
- * light-mode users. Declaring the scheme keeps form controls, scrollbars and
- * the browser's own UI consistent with the page instead of rendering light
- * widgets on a black background.
- */
-:root {
-  color-scheme: dark;
+/* Dark mode follows the visitor's system setting. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c0c09;
+    --surface: #161613;
+    --surface-muted: #22221e;
+    --field: #0c0c09;
+
+    --text: #f4f4f1;
+    --text-muted: #a3a39a;
+
+    --border: #2a2a25;
+    --border-strong: #6e6e66;
+
+    /* The button keeps #E00000 (white text 5.0:1); red TEXT needs a lighter tint. */
+    --accent-text: #ff5c5c;
+    --focus: #ff5c5c;
+
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --err: #ff6b6b;
+    --idle: #6e6e66;
+
+    --shadow-float: 0 12px 32px rgb(0 0 0 / 50%);
+
+    /* Native controls, scrollbars and select menus render dark too. */
+    color-scheme: dark;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
-    --speed: 1ms;
+    --speed: 0ms;
+  }
+}
+
+@media (width <= 640px) {
+  :root {
+    --t-4xl: 2rem;
+    --t-5xl: 2.25rem;
+    --s-9: 64px;
   }
 }

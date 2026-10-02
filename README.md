@@ -108,44 +108,48 @@ Further reading: [docs/COMPONENTS.md](docs/COMPONENTS.md) ·
 
 ## Design system
 
-Strict dark mode built on four brand colours, used exactly as specified:
+Minimal, following the [TypeUI **Minimal** design skill](https://github.com/bergside/awesome-design-skills/tree/main/skills/minimal)
+(MIT) and the TypeUI fundamentals for spacing, hierarchy and accessibility. The intent: a quiet,
+near-monochrome tool where the file and the Convert button are the only things asking for
+attention. Light and dark mode follow the visitor's system setting. Tokens live in
+`src/styles/tokens.css`.
 
-| Token | Hex | Role |
-| --- | --- | --- |
-| `--c-black` | `#000000` | page background |
-| `--c-maroon` | `#3D0000` | elevated surfaces, floating cards, secondary sections |
-| `--c-red-deep` | `#950101` | secondary buttons, borders, subtle highlights, hover |
-| `--c-red` | `#FF0000` | primary CTA, active icons, badges |
+| Token | Light | Dark | Role |
+| --- | --- | --- | --- |
+| `--bg` | `#F4F4F1` | `#0C0C09` | page |
+| `--surface` | `#FFFFFF` | `#161613` | panels and cards |
+| `--text` | `#0C0C09` | `#F4F4F1` | text (never pure black) |
+| `--text-muted` | `#5E5E57` | `#A3A39A` | secondary text |
+| `--border-strong` | `#8A8A82` | `#6E6E66` | control boundaries (≥ 3:1) |
+| `--accent` | `#E00000` | `#E00000` | the brand red: primary button, focus ring, brand mark only |
 
-Headings are `#FFFFFF`, body text `#E0E0E0`. Typeface is **Inter**, self-hosted via
-`@fontsource-variable/inter` so the site makes no third-party requests.
+The brand red is darkened from `#FF0000` to `#E00000` so white button text measures 5.0:1 and
+passes AA at normal size (pure red gave 4.0:1, which forced an oversized 20px label). In dark mode,
+red *text* and the focus ring use `#FF5C5C` (6.5:1 on the page).
 
-Two derived tints exist purely for accessibility, and are documented where they are defined in
-`src/styles/tokens.css`:
-
-- `--accent-text: #FF4D4D` — accent text on maroon. `#FF0000` measures 4.38:1 there (4.41:1 on a
-  washed chip), under the 4.5:1 AA bar; this measures 4.90:1.
-- `--border-input: #B81A1A` — form-control boundaries. `#950101` against a field background is
-  2.23:1, under the 3:1 that WCAG 1.4.11 asks of a control's visible boundary.
-
-Primary CTA labels are 20px/700 on purpose: white on `#FF0000` is 4.0:1, which passes AA for
-*large* text, and WCAG counts bold text as large only from 18.66px.
+Type: **Inter** for headings, **Open Sans** for body text, **Inconsolata** for labels and format
+tags — all self-hosted via `@fontsource-variable`, so the site makes no third-party requests.
+Spacing sits on a 4-point grid (4/8/12/16/24/32, then 48/64/96 for page rhythm); radii are 4px for
+controls and 8px for panels. Depth comes from surface colour and hairlines, not shadows.
 
 ---
 
 ## Accessibility
 
-Verified in a real browser across `/`, `/tools`, tool pages, `/pricing`, `/security` and
-`/privacy`:
+Checked in a real browser across every route (home, tools, tool pages, pricing, security, about,
+privacy, terms, contact, 404), in light and dark mode:
 
 - Every page has exactly one `<h1>` and no skipped heading levels
-- All form controls are labelled; every icon-only button has an accessible name
-- Skip-to-content link; the dropzone is a real `<button>`, so it is focusable and works with
-  Enter/Space
-- Queue progress is announced via `aria-live` without stealing focus
-- No horizontal overflow at 375px, 768px or 1440px
-- 91 measured text styles all meet their WCAG AA threshold
-- `prefers-reduced-motion` is honoured
+- Every button, link and form control has an accessible name
+- Every text/background token pair meets WCAG AA (the ratios are listed in `tokens.css`);
+  control boundaries meet the 3:1 non-text minimum
+- A 2px focus ring, 2px clear of the element, on every interactive element
+- Controls are 44px tall; on touch screens icon buttons grow to 44 × 44
+- Status is never colour alone: every state dot has a text label next to it
+- Form errors appear once a field has been edited, not on page load
+- No horizontal overflow at 375px
+- Skip-to-content link; the dropzone is a real `<button>`; queue progress is announced via
+  `aria-live`; `prefers-reduced-motion` is honoured
 
 ---
 
