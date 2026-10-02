@@ -111,11 +111,11 @@ export async function protectPdf(file: Blob, options: ToolOptions): Promise<Uint
   );
 
   if (!bytes || bytes.length === 0) {
-    throw new Error(`Convert2Any: could not encrypt this PDF${log ? ` — ${firstLine(log)}` : ''}`);
+    throw new Error(`Convert2Any: could not encrypt this PDF${log ? ` (${firstLine(log)})` : ''}`);
   }
   // Status 3 is "completed with warnings"; the output is still valid.
   if (status !== 0 && status !== 3) {
-    throw new Error(`Convert2Any: encryption failed${log ? ` — ${firstLine(log)}` : ''}`);
+    throw new Error(`Convert2Any: encryption failed${log ? ` (${firstLine(log)})` : ''}`);
   }
   return bytes;
 }
@@ -140,12 +140,12 @@ export async function unlockPdf(file: Blob, options: ToolOptions): Promise<Uint8
      * the other possibilities are named rather than ruled out.
      */
     throw new Error(
-      'Convert2Any: could not unlock this PDF — the password is probably wrong. ' +
+      'Convert2Any: could not unlock this PDF. The password is probably wrong. ' +
         'If it is correct, the file may be damaged or use an encryption scheme qpdf cannot read.',
     );
   }
   if (status !== 0 && status !== 3) {
-    throw new Error(`Convert2Any: unlock failed${log ? ` — ${firstLine(log)}` : ''}`);
+    throw new Error(`Convert2Any: unlock failed${log ? ` (${firstLine(log)})` : ''}`);
   }
   return bytes;
 }

@@ -1,7 +1,7 @@
 # Convert2Any
 
 **Convert, edit and secure files entirely in your browser.** Merge, split, compress and convert
-PDFs, Office documents and images — with no uploads, no accounts, and no server behind it.
+PDFs, Office documents and images, with no uploads, no accounts, and no server behind it.
 
 Convert2Any is a static site. Every conversion runs on the visitor's own machine using Web
 Workers and WebAssembly, so files never leave the device.
@@ -10,11 +10,11 @@ Workers and WebAssembly, so files never leave the device.
 
 ## What it does
 
-**Edit & Optimize** — merge, split, compress, reorder, rotate, delete pages
-**Convert** — PDF ⇄ Word, PDF ⇄ Excel, PDF ⇄ JPG/PNG, HTML → PDF, and JPEG/PNG/WebP/HEIC images
-**Security & Extras** — AES-256 password protection, password removal, watermarks, page numbers
+**Edit & Optimize:** merge, split, compress, reorder, rotate, delete pages
+**Convert:** PDF ⇄ Word, PDF ⇄ Excel, PDF ⇄ JPG/PNG, HTML → PDF, and JPEG/PNG/WebP/HEIC images
+**Security & Extras:** AES-256 password protection, password removal, watermarks, page numbers
 
-19 tools in total. Each one states its fidelity before you pick a file — see
+19 tools in total. Each one states its fidelity before you pick a file. See
 [docs/FEATURES.md](docs/FEATURES.md) for the full list and the limits of each.
 
 ### Fidelity, stated plainly
@@ -23,7 +23,7 @@ A browser-only converter has real limits, and the UI names them rather than hidi
 
 | Tier | Meaning | Tools |
 | --- | --- | --- |
-| **Exact** | Lossless — page content is copied, never re-rendered | merge, split, rotate, reorder, delete, watermark, page numbers, protect, unlock, JPG→PDF |
+| **Exact** | Lossless: page content is copied, never re-rendered | merge, split, rotate, reorder, delete, watermark, page numbers, protect, unlock, JPG→PDF |
 | **Text-fidelity** | Text, headings, lists and tables survive; exact visual layout does not | PDF→Word, Word→PDF, PDF→Excel, Excel→PDF, HTML→PDF |
 | **Lossy** | Re-encoded as images, so some detail is lost | compress, PDF→JPG, image converter (JPG/WebP output) |
 | **Not available** | Cannot be done in a browser without a server | PowerPoint |
@@ -98,7 +98,7 @@ removal. Heavy libraries (pdf-lib, pdf.js, SheetJS, mammoth, docx, qpdf) are laz
 tool, so the landing page never downloads a PDF engine it may not need.
 
 **Routes are prerendered.** `vite-prerender-plugin` emits real static HTML for all 27 routes at
-build time, each with its own title, description and canonical URL — so the output is
+build time, each with its own title, description and canonical URL, so the output is
 crawlable and deep-linkable while remaining a plain folder of files.
 
 Further reading: [docs/COMPONENTS.md](docs/COMPONENTS.md) ·
@@ -111,8 +111,10 @@ Further reading: [docs/COMPONENTS.md](docs/COMPONENTS.md) ·
 Minimal, following the [TypeUI **Minimal** design skill](https://github.com/bergside/awesome-design-skills/tree/main/skills/minimal)
 (MIT) and the TypeUI fundamentals for spacing, hierarchy and accessibility. The intent: a quiet,
 near-monochrome tool where the file and the Convert button are the only things asking for
-attention. Light and dark mode follow the visitor's system setting. Tokens live in
-`src/styles/tokens.css`.
+attention. Light and dark mode follow the visitor's system setting, and a toggle in the header
+switches and remembers the choice. A Ripple animation (from
+[loading-ui](https://github.com/turbostarter/loading-ui), MIT) shows while a page starts and while
+conversions and downloads are in progress. Tokens live in `src/styles/tokens.css`.
 
 | Token | Light | Dark | Role |
 | --- | --- | --- | --- |
@@ -128,7 +130,7 @@ passes AA at normal size (pure red gave 4.0:1, which forced an oversized 20px la
 red *text* and the focus ring use `#FF5C5C` (6.5:1 on the page).
 
 Type: **Inter** for headings, **Open Sans** for body text, **Inconsolata** for labels and format
-tags — all self-hosted via `@fontsource-variable`, so the site makes no third-party requests.
+tags, all self-hosted via `@fontsource-variable`, so the site makes no third-party requests.
 Spacing sits on a 4-point grid (4/8/12/16/24/32, then 48/64/96 for page rhythm); radii are 4px for
 controls and 8px for panels. Depth comes from surface colour and hairlines, not shadows.
 
@@ -166,4 +168,4 @@ privacy, terms, contact, 404), in light and dark mode:
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

@@ -89,6 +89,15 @@
   width: 100%;
 }
 
+/*
+ * Busy: the button is disabled so it cannot be pressed twice, but it shows
+ * the Ripple at full strength — it is working, not unavailable.
+ */
+.btn.is-loading:disabled {
+  opacity: 1;
+  cursor: progress;
+}
+
 /* Touch screens get the full 44px target on every control. */
 @media (pointer: coarse) {
   .btn-sm {
@@ -295,12 +304,43 @@
 
 .nav-toggle {
   display: none;
-  margin-left: auto;
+}
+
+/* Theme toggle: both icons are in the markup; the current theme picks one. */
+.theme-toggle {
+  margin-left: var(--s-2);
+}
+
+/* Header icon buttons match the height of the "Start converting" button beside them. */
+.theme-toggle,
+.nav-toggle {
+  width: var(--control-h);
+  min-height: var(--control-h);
+}
+
+.theme-icon-sun,
+:root[data-theme='dark'] .theme-icon-moon {
+  display: none;
+}
+
+:root[data-theme='dark'] .theme-icon-sun {
+  display: block;
 }
 
 @media (width <= 820px) {
+  /* Theme and menu buttons form one cluster on the right, 4px apart. */
+  .nav-inner {
+    gap: var(--s-1);
+  }
+
+  .theme-toggle {
+    order: 2;
+    margin-left: auto;
+  }
+
   .nav-toggle {
     display: inline-flex;
+    order: 3;
   }
 
   /*
@@ -770,9 +810,17 @@
   background: var(--idle);
 }
 
+/* While converting, the Ripple takes the dot's place. */
+.status-converting {
+  color: var(--text);
+}
+
 .status-converting::before {
-  background: var(--accent);
-  animation: pulse 1s var(--ease) infinite alternate;
+  display: none;
+}
+
+.status .ripple {
+  color: var(--accent-text);
 }
 
 .status-done {
@@ -789,12 +837,6 @@
 
 .status-error::before {
   background: var(--err);
-}
-
-@keyframes pulse {
-  to {
-    opacity: 0.25;
-  }
 }
 
 /* ------------------------------------------------------------- accordion */

@@ -24,7 +24,7 @@ async function imageBitmapFromImageData(img: ImageData): Promise<ImageBitmap> {
   // OffscreenCanvas exists in every browser that also ships the WASM codecs we
   // use; this guard is for the type system, not for real browsers.
   if (typeof OffscreenCanvas === 'undefined') {
-    throw new Error('Convert2Any: OffscreenCanvas unavailable — cannot convert this file');
+    throw new Error('Convert2Any: OffscreenCanvas is unavailable, so this file cannot be converted');
   }
   const canvas = new OffscreenCanvas(img.width, img.height);
   const ctx = canvas.getContext('2d');

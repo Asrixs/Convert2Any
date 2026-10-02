@@ -20,9 +20,9 @@ export const SITE_NAME = 'Convert2Any';
 export const SITE_URL = 'https://convert2any.app';
 
 const DEFAULT: SeoData = {
-  title: 'Convert2Any — convert, edit and secure files in your browser',
+  title: 'Convert2Any | Convert, edit and secure files in your browser',
   description:
-    'Merge, split, compress and convert PDFs, Office documents and images. Everything runs locally in your browser — no uploads, no accounts.',
+    'Merge, split, compress and convert PDFs, Office documents and images. Everything runs locally in your browser: no uploads, no accounts.',
   path: '/',
 };
 
@@ -30,7 +30,7 @@ let current: SeoData = DEFAULT;
 
 /** Full <title> text for a route. */
 export function fullTitle(data: SeoData): string {
-  return data.title.includes(SITE_NAME) ? data.title : `${data.title} — ${SITE_NAME}`;
+  return data.title.includes(SITE_NAME) ? data.title : `${data.title} | ${SITE_NAME}`;
 }
 
 export function getSeo(): SeoData {

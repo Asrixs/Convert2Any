@@ -19,6 +19,7 @@ import { downloadBlobs } from '../download';
 import { Dropzone } from './Dropzone';
 import { Button, Notice } from './ui';
 import { Icon } from './Icon';
+import { Ripple } from './Ripple';
 import type { Tool } from '../tools/catalog';
 
 /**
@@ -103,6 +104,9 @@ export function Converter({
   const jobs = state.jobs;
   const [quality, setQuality] = useState(85);
   const [running, setRunning] = useState(false);
+  // Which download is being prepared ('all' or a job id): reading results and
+  // zipping several of them can take a moment on large files.
+  const [preparing, setPreparing] = useState<string | null>(null);
 
   const filesRef = useRef(new Map<string, File[]>());
   const outputsRef = useRef(new Map<string, OutputBlob[]>());
@@ -310,6 +314,15 @@ export function Converter({
     setRunning(false);
   }
 
+  async function download(key: string, outputs: OutputBlob[]): Promise<void> {
+    setPreparing(key);
+    try {
+      await downloadBlobs(outputs);
+    } finally {
+      setPreparing(null);
+    }
+  }
+
   function forget(id: string): void {
     filesRef.current.delete(id);
     outputsRef.current.delete(id);
@@ -380,6 +393,7 @@ export function Converter({
                 <div class="queue-title">
                   <span class="queue-name">{job.name}</span>
                   <span class={`status status-${job.status}`}>
+                    {job.status === 'converting' && <Ripple size={14} />}
                     {STATUS_LABEL[job.status]}
                   </span>
                 </div>
@@ -473,12 +487,14 @@ export function Converter({
                   {job.status === 'done' && (
                     <Button
                       size="sm"
-                      icon="download"
+                      icon={preparing === job.id ? undefined : 'download'}
                       data-testid="download-one"
-                      onClick={() =>
-                        void downloadBlobs(outputsRef.current.get(job.id) ?? [])
-                      }
+                      class={preparing === job.id ? 'is-loading' : undefined}
+                      aria-busy={preparing === job.id || undefined}
+                      disabled={preparing !== null}
+                      onClick={() => void download(job.id, outputsRef.current.get(job.id) ?? [])}
                     >
+                      {preparing === job.id && <Ripple size={14} />}
                       Save
                     </Button>
                   )}
@@ -554,9 +570,12 @@ export function Converter({
           <Button
             variant="primary"
             data-testid="run-all"
+            class={running ? 'is-loading' : undefined}
+            aria-busy={running || undefined}
             disabled={!canRun}
             onClick={() => void runAll()}
           >
+            {running && <Ripple size={18} />}
             {running
               ? 'Converting…'
               : runnableCount > 1
@@ -565,11 +584,19 @@ export function Converter({
           </Button>
           {hasDone && (
             <Button
-              icon="download"
+              icon={preparing === 'all' ? undefined : 'download'}
               data-testid="download-all"
-              onClick={() => void downloadBlobs(doneOutputs())}
+              class={preparing === 'all' ? 'is-loading' : undefined}
+              aria-busy={preparing === 'all' || undefined}
+              disabled={preparing !== null}
+              onClick={() => void download('all', doneOutputs())}
             >
-              {doneCount > 1 ? 'Download all (.zip)' : 'Download'}
+              {preparing === 'all' && <Ripple size={18} />}
+              {preparing === 'all'
+                ? 'Preparing…'
+                : doneCount > 1
+                  ? 'Download all (.zip)'
+                  : 'Download'}
             </Button>
           )}
           {hasFinished && (

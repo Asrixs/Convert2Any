@@ -18,6 +18,40 @@ The site shell: skip link, sticky nav, page slot, footer. Wraps every route.
 - The nav panel is toggled with an `.open` class, **not** the `hidden` attribute. `hidden` applies
   at every width and would hide the links on desktop too.
 - Footer tool links are read from the catalog, so they cannot drift from the real toolset.
+- **Theme toggle.** A toggle button named "Dark mode" with `aria-pressed`. It sets
+  `<html data-theme>` and saves the choice (`src/theme.ts`); an inline script in `index.html`
+  applies the saved choice, or the system setting, before first paint. Both the sun and moon
+  icons are rendered and CSS shows the right one, so the prerendered HTML is correct before any
+  script runs. In the DOM it comes after the links, so desktop focus order matches what you see.
+
+---
+
+## `Ripple` — `components/Ripple.tsx`
+
+The loading indicator: two staggered rings that grow and fade, ported from
+[loading-ui](https://github.com/turbostarter/loading-ui) (MIT) without its Tailwind dependency.
+
+| Prop | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `size` | `number` | `16` | Pixel width and height |
+| `label` | `string` | — | Set when it stands alone; omit next to text that already explains |
+| `class` | `string` | — | |
+
+Colour follows `currentColor`. The rings animate with SVG `<animate>` (SMIL), which ignores CSS,
+so for `prefers-reduced-motion` the component pauses them on a still frame.
+
+Where it appears:
+
+- **Page load.** A full-screen Ripple in `index.html` covers the page until the app has started
+  and its fonts are in (at least 400 ms after navigation, at most about 1.5 s of waiting on fonts),
+  then fades out. A CSS failsafe hides it after 5 s even if the app never starts, and it is hidden
+  entirely when scripts are off.
+- **Convert button** while jobs run, and the **status label** of each converting job.
+- **Save / Download all** while results are read and zipped. Zipping runs in fflate's worker,
+  so the page stays responsive.
+
+Busy buttons are disabled (no double submits) but keep full opacity via `.is-loading`, and carry
+`aria-busy`.
 
 ---
 

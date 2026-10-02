@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Convert2Any — convert, edit and secure files in your browser</title>
+    <title>Convert2Any | Convert, edit and secure files in your browser</title>
     <!--
       No description meta here on purpose: every route injects its own at
       build time (see headElements in src/seo.ts). A static one would be
@@ -14,8 +14,84 @@
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <!--
+      Theme, applied before first paint so a dark-mode visitor never sees a
+      flash of the light page: the saved choice from the header toggle, else
+      the system setting. src/theme.ts takes over after load. If you add a
+      Content-Security-Policy, allow this script by its hash (docs/DEPLOY.md).
+    -->
+    <script>
+      (function () {
+        var theme = null;
+        try {
+          theme = localStorage.getItem('convert2any:theme');
+        } catch (e) {}
+        if (theme !== 'light' && theme !== 'dark') {
+          theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
+    <!--
+      Page loader styles live here rather than in the bundle so the loader is
+      styled from the very first paint. The failsafe animation hides it after
+      5 seconds even if the app never starts.
+    -->
+    <style>
+      #page-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: grid;
+        place-items: center;
+        background: #f4f4f1;
+        color: #e00000;
+        transition:
+          opacity 200ms ease,
+          visibility 200ms ease;
+        animation: page-loader-failsafe 0s linear 5s forwards;
+      }
+      :root[data-theme='dark'] #page-loader {
+        background: #0c0c09;
+        color: #ff5c5c;
+      }
+      #page-loader.is-done {
+        opacity: 0;
+        visibility: hidden;
+      }
+      @keyframes page-loader-failsafe {
+        to {
+          opacity: 0;
+          visibility: hidden;
+        }
+      }
+    </style>
+    <noscript>
+      <style>
+        #page-loader,
+        .theme-toggle {
+          display: none;
+        }
+      </style>
+    </noscript>
   </head>
   <body>
+    <!-- The Ripple loader (see src/components/Ripple.tsx), shown while the page starts. -->
+    <div id="page-loader" role="status">
+      <svg width="56" height="56" viewBox="0 0 44 44" fill="none" stroke="currentColor" aria-hidden="true">
+        <g fill="none" fill-rule="evenodd" stroke-width="2">
+          <circle cx="22" cy="22" r="1">
+            <animate attributeName="r" begin="0s" calcMode="spline" dur="1.8s" keySplines="0.165, 0.84, 0.44, 1" keyTimes="0; 1" repeatCount="indefinite" values="1; 20" />
+            <animate attributeName="stroke-opacity" begin="0s" calcMode="spline" dur="1.8s" keySplines="0.3, 0.61, 0.355, 1" keyTimes="0; 1" repeatCount="indefinite" values="1; 0" />
+          </circle>
+          <circle cx="22" cy="22" r="1">
+            <animate attributeName="r" begin="-0.9s" calcMode="spline" dur="1.8s" keySplines="0.165, 0.84, 0.44, 1" keyTimes="0; 1" repeatCount="indefinite" values="1; 20" />
+            <animate attributeName="stroke-opacity" begin="-0.9s" calcMode="spline" dur="1.8s" keySplines="0.3, 0.61, 0.355, 1" keyTimes="0; 1" repeatCount="indefinite" values="1; 0" />
+          </circle>
+        </g>
+      </svg>
+      <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">Loading Convert2Any</span>
+    </div>
     <div id="app"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

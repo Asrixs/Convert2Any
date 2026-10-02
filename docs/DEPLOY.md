@@ -112,7 +112,7 @@ adding. It must allow WebAssembly and workers:
 ```
 Content-Security-Policy:
   default-src 'self';
-  script-src 'self' 'wasm-unsafe-eval';
+  script-src 'self' 'wasm-unsafe-eval' 'sha256-G/16eFj/AguYWv+4TJe8800RqZiqOyvnro+KCs/+Sk8=';
   worker-src 'self' blob:;
   style-src 'self' 'unsafe-inline';
   img-src 'self' data: blob:;
@@ -124,6 +124,11 @@ Content-Security-Policy:
 ```
 
 - `'wasm-unsafe-eval'` is required — the image codecs and qpdf are WebAssembly.
+- The `sha256-…` source allows the small inline script in `index.html` that applies the saved
+  light/dark theme before first paint. Without it the site still works, but dark-mode visitors
+  see a brief flash of the light page. If you edit that script, recompute the hash from its exact
+  text (with LF line endings), for example:
+  `node -e "const h=require('fs').readFileSync('dist/index.html','utf8').match(/<script>([\s\S]*?)<\/script>/)[1];console.log(require('crypto').createHash('sha256').update(h).digest('base64'))"`
 - `worker-src blob:` is required — Vite instantiates bundled workers from blob URLs.
 - `style-src 'unsafe-inline'` is needed because the pages use inline `style` attributes for
   one-off layout values. Remove it if you move those into classes.

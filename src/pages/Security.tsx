@@ -8,7 +8,7 @@ export function Security(): JSX.Element {
   useSeo({
     title: 'Security',
     description:
-      'Convert2Any processes files entirely in your browser using Web Workers and WebAssembly. No uploads, no telemetry, no third-party requests — and here is how to verify it.',
+      'Convert2Any processes files entirely in your browser using Web Workers and WebAssembly. No uploads, no telemetry, no third-party requests, and here is how to verify it.',
     path: '/security',
   });
 
@@ -18,13 +18,13 @@ export function Security(): JSX.Element {
         <SectionHead
           title="There is no server to trust"
           level={1}
-          lead="Most converters ask you to upload a file and then trust a retention policy. Convert2Any removes that trade entirely — the conversion runs on your machine, so there is no copy of your file anywhere else."
+          lead="Most converters ask you to upload a file and then trust a retention policy. Convert2Any removes that trade entirely: the conversion runs on your machine, so there is no copy of your file anywhere else."
         />
 
         <div class="grid grid-3" style="gap:var(--s-6)">
           <FeatureItem level={2} icon="shield" title="No network path for your data">
             Files are read with the File API and processed in a Web Worker. No fetch, XHR or
-            WebSocket ever receives your file contents — the only downloads are the app's own code.
+            WebSocket ever receives your file contents. The only downloads are the app's own code.
           </FeatureItem>
           <FeatureItem level={2} icon="layers" title="No third-party requests">
             Fonts, WebAssembly modules and scripts are all served from this origin. There is no CDN
@@ -49,7 +49,7 @@ export function Security(): JSX.Element {
               <strong>Watch the network.</strong>{' '}
               <span class="muted">
                 Open your browser's developer tools, switch to the Network tab, then convert a file.
-                You will see the app load its own scripts, WebAssembly and fonts — and no request
+                You will see the app load its own scripts, WebAssembly and fonts, and no request
                 that carries your file.
               </span>
             </li>
@@ -69,7 +69,7 @@ export function Security(): JSX.Element {
             <p class="muted">
               Image conversion decodes to raw pixels and re-encodes from those pixels. EXIF, GPS
               coordinates and camera details are not stripped by a filter that could be
-              misconfigured — there is simply no code path that carries them from input to output.
+              misconfigured. There is simply no code path that carries them from input to output.
               Orientation is baked into the pixels first, so photos stay upright.
             </p>
           </div>

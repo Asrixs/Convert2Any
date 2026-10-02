@@ -62,7 +62,7 @@ export function About(): JSX.Element {
           <p>
             Convert2Any takes the other route. Browsers have been able to decode images, parse PDFs
             and run WebAssembly for years. If the conversion can happen on your machine, there is
-            no reason to move the file at all — and then the retention policy stops mattering,
+            no reason to move the file at all, and then the retention policy stops mattering,
             because there is nothing to retain.
           </p>
 
@@ -99,7 +99,7 @@ export function About(): JSX.Element {
             No analytics scripts and no error reporting. We do not know which tools you use.
           </FeatureItem>
           <FeatureItem icon="layers" title={`${TOOLS.length} tools`}>
-            Documents, images, spreadsheets, markup and security — all from the same static bundle.
+            Documents, images, spreadsheets, markup and security, all from the same static bundle.
           </FeatureItem>
         </div>
       </div>
@@ -156,7 +156,7 @@ export function Privacy(): JSX.Element {
 
       <h2>Changes</h2>
       <p>
-        If this ever changes — for instance if an optional server-side Pro tier ships — it will be
+        If this ever changes, for instance if an optional server-side Pro tier ships, it will be
         opt-in, clearly labelled at the point of use, and described here before it launches.
       </p>
     </Prose>
@@ -196,7 +196,7 @@ export function Terms(): JSX.Element {
         You are responsible for having the right to process the files you convert, and for
         complying with the laws that apply to you. The password tools are for documents you own or
         are authorised to access: Unlock PDF removes protection when you supply the correct
-        password — it is not a means of defeating encryption you do not hold the password for.
+        password. It is not a means of defeating encryption you do not hold the password for.
       </p>
 
       <h2>Passwords</h2>
@@ -238,7 +238,7 @@ export function Contact(): JSX.Element {
 
         <div class="grid grid-2" style="gap:var(--s-6)">
           <FeatureItem level={2} icon="bolt" title="Bugs and formats">
-            A conversion that produced something wrong is worth reporting — especially if you can
+            A conversion that produced something wrong is worth reporting, especially if you can
             describe the source document. Format requests are welcome too, though anything that
             needs a server will be declined for the reasons on the about page.{' '}
             <a href={issues} rel="noopener">
@@ -258,7 +258,7 @@ export function Contact(): JSX.Element {
 
         <p class="muted" style="max-width:68ch">
           Before you write, please check the tool's own page. Most surprises are the documented
-          fidelity limits — a Word file losing its fonts, or a scanned PDF yielding no text — and
+          fidelity limits (a Word file losing its fonts, or a scanned PDF yielding no text), and
           each of those is explained where it happens.
         </p>
       </div>
