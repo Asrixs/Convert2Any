@@ -29,7 +29,7 @@ export function ToolPage(): JSX.Element {
 
 function ToolView({ tool }: { tool: Tool }): JSX.Element {
   useSeo({
-    title: `${tool.title} — free, in your browser`,
+    title: `${tool.title}, free in your browser`,
     description: tool.short,
     path: `/tools/${tool.slug}`,
   });

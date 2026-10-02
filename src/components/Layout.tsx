@@ -1,8 +1,9 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import type { ComponentChildren, JSX } from 'preact';
 import { useLocation } from 'preact-iso';
 import { Icon } from './Icon';
 import { CATEGORIES, toolsByCategory } from '../tools/catalog';
+import { currentTheme, followSystemTheme, setTheme } from '../theme';
 
 /**
  * Site shell: skip link, sticky navigation, and the footer.
@@ -76,6 +77,13 @@ export function Layout({ children }: { children: ComponentChildren }): JSX.Eleme
               </a>
             </li>
           </ul>
+
+          {/*
+           * After the links in the DOM, so on desktop the focus order matches
+           * the visual order (links, CTA, theme). On narrow screens CSS moves
+           * it beside the menu button.
+           */}
+          <ThemeToggle />
         </div>
       </header>
 
@@ -83,6 +91,40 @@ export function Layout({ children }: { children: ComponentChildren }): JSX.Eleme
 
       <Footer />
     </>
+  );
+}
+
+/**
+ * Light/dark switch. A toggle button: its name stays "Dark mode" and
+ * aria-pressed says whether it is on. Both icons are rendered and CSS shows
+ * the one matching <html data-theme>, so the prerendered page shows the right
+ * icon before any script runs.
+ */
+function ThemeToggle(): JSX.Element {
+  // Unknown until mounted: the theme is decided in the browser, not at build time.
+  const [dark, setDark] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setDark(currentTheme() === 'dark');
+    return followSystemTheme((theme) => setDark(theme === 'dark'));
+  }, []);
+
+  return (
+    <button
+      type="button"
+      class="btn btn-sm btn-icon theme-toggle"
+      aria-label="Dark mode"
+      aria-pressed={dark === null ? undefined : dark}
+      title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+      onClick={() => {
+        const next = currentTheme() === 'dark' ? 'light' : 'dark';
+        setTheme(next);
+        setDark(next === 'dark');
+      }}
+    >
+      <Icon name="moon" size={18} class="theme-icon-moon" />
+      <Icon name="sun" size={18} class="theme-icon-sun" />
+    </button>
   );
 }
 
@@ -159,7 +201,7 @@ function Footer(): JSX.Element {
 
         <div class="footer-bottom">
           <span>© {new Date().getFullYear()} Convert2Any · MIT licensed</span>
-          <span>A static site — every conversion runs on your device.</span>
+          <span>A static site. Every conversion runs on your device.</span>
         </div>
       </div>
     </footer>

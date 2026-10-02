@@ -101,9 +101,42 @@
   color-scheme: light;
 }
 
-/* Dark mode follows the visitor's system setting. */
+/*
+ * Dark mode. The header toggle sets data-theme on <html> (an inline script in
+ * index.html applies the saved choice, or the system setting, before first
+ * paint). The media query is the fallback when scripts are off: it follows
+ * the system setting unless a theme has been set explicitly. The two blocks
+ * must stay identical.
+ */
+:root[data-theme='dark'] {
+  --bg: #0c0c09;
+  --surface: #161613;
+  --surface-muted: #22221e;
+  --field: #0c0c09;
+
+  --text: #f4f4f1;
+  --text-muted: #a3a39a;
+
+  --border: #2a2a25;
+  --border-strong: #6e6e66;
+
+  /* The button keeps #E00000 (white text 5.0:1); red TEXT needs a lighter tint. */
+  --accent-text: #ff5c5c;
+  --focus: #ff5c5c;
+
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --err: #ff6b6b;
+  --idle: #6e6e66;
+
+  --shadow-float: 0 12px 32px rgb(0 0 0 / 50%);
+
+  /* Native controls, scrollbars and select menus render dark too. */
+  color-scheme: dark;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --bg: #0c0c09;
     --surface: #161613;
     --surface-muted: #22221e;
@@ -115,7 +148,6 @@
     --border: #2a2a25;
     --border-strong: #6e6e66;
 
-    /* The button keeps #E00000 (white text 5.0:1); red TEXT needs a lighter tint. */
     --accent-text: #ff5c5c;
     --focus: #ff5c5c;
 
@@ -126,7 +158,6 @@
 
     --shadow-float: 0 12px 32px rgb(0 0 0 / 50%);
 
-    /* Native controls, scrollbars and select menus render dark too. */
     color-scheme: dark;
   }
 }

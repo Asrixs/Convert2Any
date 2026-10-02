@@ -117,7 +117,7 @@ export async function pdfToDocx(file: Blob, options: ToolOptions): Promise<Uint8
 
   if (children.length === 0) {
     throw new Error(
-      'Convert2Any: no text found — this PDF is probably scanned images, which needs OCR',
+      'Convert2Any: no text found. This PDF is probably scanned images, which needs OCR',
     );
   }
   const doc = new Document({ sections: [{ children }] });
@@ -152,7 +152,7 @@ export async function pdfToSpreadsheet(file: Blob, options: ToolOptions): Promis
 
   if (added === 0) {
     throw new Error(
-      'Convert2Any: no text found — this PDF is probably scanned images, which needs OCR',
+      'Convert2Any: no text found. This PDF is probably scanned images, which needs OCR',
     );
   }
   const out = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;

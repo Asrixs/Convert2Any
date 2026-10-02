@@ -36,6 +36,8 @@ export type IconName =
   | 'arrow-right'
   | 'arrow-up'
   | 'arrow-down'
+  | 'sun'
+  | 'moon'
   | 'menu'
   | 'close'
   | 'download';
@@ -67,6 +69,18 @@ const PATHS: Record<IconName, string[]> = {
   'arrow-right': ['M4 12h16', 'm14 6 6 6-6 6'],
   'arrow-up': ['M12 20V4', 'm6 10 6-6 6 6'],
   'arrow-down': ['M12 4v16', 'm6 14 6 6 6-6'],
+  sun: [
+    'M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z',
+    'M12 2v2',
+    'M12 20v2',
+    'm4.9 4.9 1.4 1.4',
+    'm17.7 17.7 1.4 1.4',
+    'M2 12h2',
+    'M20 12h2',
+    'm6.3 17.7-1.4 1.4',
+    'm19.1 4.9-1.4 1.4',
+  ],
+  moon: ['M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z'],
   menu: ['M4 7h16', 'M4 12h16', 'M4 17h16'],
   close: ['m6 6 12 12', 'm18 6-12 12'],
   download: ['M12 4v12', 'm7 11 5 5 5-5', 'M4 20h16'],

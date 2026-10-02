@@ -1,4 +1,4 @@
-import { zipSync, type Zippable } from 'fflate';
+import { zip, zipSync, type Zippable } from 'fflate';
 import type { OutputBlob } from './types';
 
 /**
@@ -43,9 +43,26 @@ export async function downloadBlobs(outputs: OutputBlob[]): Promise<void> {
     seen.add(name);
     zipInput[name] = new Uint8Array(await output.blob.arrayBuffer());
   }
-  const zipped = zipSync(zipInput);
+  const zipped = await makeZip(zipInput);
   downloadBlob(
     new Blob([zipped.slice().buffer as ArrayBuffer], { type: 'application/zip' }),
     'convert2any.zip',
   );
+}
+
+/**
+ * Every output (PDF, JPG, PNG, WebP, DOCX, XLSX) is already compressed, so
+ * entries are stored rather than deflated again: far faster, nearly the same
+ * size. The async form zips in fflate's own worker, keeping the page — and its
+ * loading indicator — responsive; zipSync is the fallback where workers are
+ * unavailable (for example a CSP without worker-src blob:).
+ */
+async function makeZip(input: Zippable): Promise<Uint8Array> {
+  try {
+    return await new Promise<Uint8Array>((resolve, reject) => {
+      zip(input, { level: 0 }, (err, data) => (err ? reject(err) : resolve(data)));
+    });
+  } catch {
+    return zipSync(input, { level: 0 });
+  }
 }

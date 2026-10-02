@@ -13,9 +13,9 @@ import { useSeo } from '../seo';
  */
 export function Home(): JSX.Element {
   useSeo({
-    title: 'Convert2Any — convert, edit and secure files in your browser',
+    title: 'Convert2Any | Convert, edit and secure files in your browser',
     description:
-      'Merge, split, compress and convert PDFs, Office documents and images. Everything runs locally in your browser — no uploads, no accounts, no waiting.',
+      'Merge, split, compress and convert PDFs, Office documents and images. Everything runs locally in your browser: no uploads, no accounts, no waiting.',
     path: '/',
   });
 
@@ -87,7 +87,7 @@ export function Home(): JSX.Element {
               the conversion.
             </FeatureItem>
             <FeatureItem icon="check" title="Honest about fidelity">
-              Every tool says whether it is exact, text-only or lossy before you choose a file —
+              Every tool says whether it is exact, text-only or lossy before you choose a file,
               not after.
             </FeatureItem>
           </div>

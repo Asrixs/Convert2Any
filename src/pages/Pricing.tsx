@@ -36,7 +36,7 @@ export function Pricing(): JSX.Element {
   useSeo({
     title: 'Pricing',
     description:
-      'Convert2Any is free and needs no account — every tool runs in your browser. A Pro tier for server-side, full-fidelity Office conversion is being explored.',
+      'Convert2Any is free and needs no account, because every tool runs in your browser. A Pro tier for server-side, full-fidelity Office conversion is being explored.',
     path: '/pricing',
   });
 
@@ -81,9 +81,9 @@ export function Pricing(): JSX.Element {
                 <h2 class="card-title">Pro</h2>
                 <span class="badge badge-unavailable">Not built yet</span>
               </div>
-              <div class="row" style="gap:var(--s-2);align-items:baseline">
-                <span class="price muted">—</span>
-                <span class="price-period">not priced</span>
+              {/* Same height as the Free plan's price row, so the lists line up. */}
+              <div class="row" style="min-height:var(--t-4xl)">
+                <span class="price-period">Not priced yet</span>
               </div>
               <ul class="feature-list">
                 {PRO_FEATURES.map((item) => (
@@ -109,7 +109,7 @@ export function Pricing(): JSX.Element {
             />
             <Accordion
               q="Why would Pro need a server if the point is not uploading?"
-              a="Because some conversions are genuinely impossible in a browser. Exact Word and PowerPoint layout needs a real rendering engine, and OCR needs models too large to ship to a tab. Pro would be opt-in and clearly marked — the free tools would keep running locally."
+              a="Because some conversions are genuinely impossible in a browser. Exact Word and PowerPoint layout needs a real rendering engine, and OCR needs models too large to ship to a tab. Pro would be opt-in and clearly marked, and the free tools would keep running locally."
             />
             <Accordion
               q="How will I hear about Pro?"
@@ -117,7 +117,7 @@ export function Pricing(): JSX.Element {
             />
             <Accordion
               q="Can I self-host Convert2Any?"
-              a="Yes. The production build is a folder of static files — put it behind any web server or CDN and it works, including on an internal network with no internet access."
+              a="Yes. The production build is a folder of static files. Put it behind any web server or CDN and it works, including on an internal network with no internet access."
             />
           </div>
         </div>

@@ -33,6 +33,39 @@ if (typeof document !== 'undefined') {
   } else {
     render(<App />, mount);
   }
+  dismissPageLoader();
+}
+
+/**
+ * Fade out the page loader from index.html once the app is interactive and
+ * its fonts are in, so the page appears once, fully styled.
+ *
+ * It stays at least MIN_VISIBLE_MS after navigation starts — a loader that
+ * blinks for a few frames reads as a glitch — and never waits on fonts for
+ * longer than FONT_WAIT_MS. A CSS failsafe in index.html hides it regardless
+ * after 5 seconds.
+ */
+function dismissPageLoader(): void {
+  const MIN_VISIBLE_MS = 400;
+  const FONT_WAIT_MS = 1500;
+  const loader = document.getElementById('page-loader');
+  if (!loader) return;
+
+  // SMIL ignores reduced-motion CSS: hold the rings still instead.
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    loader.querySelector('svg')?.pauseAnimations();
+  }
+
+  const fontsReady = document.fonts?.ready ?? Promise.resolve();
+  const timeout = new Promise((resolve) => setTimeout(resolve, FONT_WAIT_MS));
+  void Promise.race([fontsReady, timeout]).then(() => {
+    const wait = Math.max(0, MIN_VISIBLE_MS - performance.now());
+    setTimeout(() => {
+      loader.classList.add('is-done');
+      // Remove once faded, so it can never intercept a click.
+      setTimeout(() => loader.remove(), 300);
+    }, wait);
+  });
 }
 
 /**

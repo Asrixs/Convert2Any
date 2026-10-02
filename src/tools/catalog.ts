@@ -163,7 +163,7 @@ export const TOOLS: Tool[] = [
     title: 'Compress PDF',
     short: 'Shrink a large PDF by re-rendering its pages at a lower quality.',
     description:
-      'Best suited to scanned documents and image-heavy files, where it can cut size dramatically. Pages are rasterized, which means text in the output is no longer selectable — a real trade-off, so check the result before discarding the original.',
+      'Best suited to scanned documents and image-heavy files, where it can cut size dramatically. Pages are rasterized, which means text in the output is no longer selectable. That is a real trade-off, so check the result before discarding the original.',
     category: 'edit',
     icon: 'compress',
     accepts: ['pdf'],
@@ -196,7 +196,7 @@ export const TOOLS: Tool[] = [
     faq: [
       {
         q: 'Why did my text-only PDF get bigger?',
-        a: 'Text PDFs are already compact. Rasterizing them adds data — this tool is for scans and image-heavy documents.',
+        a: 'Text PDFs are already compact. Rasterizing them adds data. This tool is for scans and image-heavy documents.',
       },
     ],
   },
@@ -306,7 +306,7 @@ export const TOOLS: Tool[] = [
     faq: [
       {
         q: 'Why is my layout different?',
-        a: 'A PDF stores positioned glyphs, not paragraphs. Rebuilding a Word layout from that is inference — we recover reading order and text, and leave the styling to you.',
+        a: 'A PDF stores positioned glyphs, not paragraphs. Rebuilding a Word layout from that is inference: we recover reading order and text, and leave the styling to you.',
       },
     ],
   },
@@ -357,7 +357,7 @@ export const TOOLS: Tool[] = [
     title: 'Excel to PDF',
     short: 'Render a spreadsheet or CSV as a paginated PDF table.',
     description:
-      'Every sheet becomes a titled table, drawn with real borders and wrapped cell text that flows across pages. Cell values are used as displayed — formulas are read as their computed results.',
+      'Every sheet becomes a titled table, drawn with real borders and wrapped cell text that flows across pages. Cell values are used as displayed, and formulas are read as their computed results.',
     category: 'convert',
     icon: 'pdf',
     accepts: ['xlsx', 'csv'],
@@ -449,7 +449,7 @@ export const TOOLS: Tool[] = [
     produces: 'PDF',
     fidelity: 'text',
     caveat:
-      'CSS is not applied and external resources are never fetched — the document structure is what converts.',
+      'CSS is not applied and external resources are never fetched. The document structure is what converts.',
     fields: [
       {
         name: 'html',
@@ -467,7 +467,7 @@ export const TOOLS: Tool[] = [
     title: 'Image converter',
     short: 'Convert between JPG, PNG, WebP and HEIC.',
     description:
-      'Images are decoded to raw pixels and re-encoded in the target format. Because the output is built from pixels alone, EXIF and GPS metadata cannot survive the trip — stripping is structural, not a checkbox.',
+      'Images are decoded to raw pixels and re-encoded in the target format. Because the output is built from pixels alone, EXIF and GPS metadata cannot survive the trip. Stripping is structural, not a checkbox.',
     category: 'convert',
     icon: 'image',
     accepts: IMAGE_INPUTS,
@@ -502,14 +502,14 @@ export const TOOLS: Tool[] = [
   {
     slug: 'powerpoint-to-pdf',
     title: 'PowerPoint to PDF',
-    short: 'Not available in the browser — here is why, and what to use instead.',
+    short: 'Not available in the browser. Here is why, and what to use instead.',
     description:
       'PPTX is a slide-canvas format: every element is absolutely positioned against a theme, master layout and embedded media. Reproducing that faithfully needs a real rendering engine such as LibreOffice running on a server. Approximating it in a browser would produce slides that look plausible and are quietly wrong, so Convert2Any does not offer it rather than shipping something misleading.',
     category: 'convert',
     icon: 'slides',
     accepts: [],
     multiple: false,
-    produces: '—',
+    produces: 'None',
     fidelity: 'unavailable',
     caveat:
       'Use PowerPoint or Keynote "Export to PDF", or LibreOffice Impress, which all render slides properly.',
@@ -523,7 +523,7 @@ export const TOOLS: Tool[] = [
     title: 'Protect PDF',
     short: 'Lock a PDF with a password using real AES encryption.',
     description:
-      'Convert2Any encrypts the document with AES-256 so it cannot be opened without the password. The encryption is performed by qpdf compiled to WebAssembly, running here in your browser — the password is never transmitted anywhere.',
+      'Convert2Any encrypts the document with AES-256 so it cannot be opened without the password. The encryption is performed by qpdf compiled to WebAssembly, running here in your browser, so the password is never transmitted anywhere.',
     category: 'security',
     icon: 'lock',
     accepts: ['pdf'],
@@ -563,7 +563,7 @@ export const TOOLS: Tool[] = [
     title: 'Unlock PDF',
     short: 'Remove password protection from a PDF you can already open.',
     description:
-      'Supply the password that opens the document and Convert2Any writes out a decrypted copy, keeping the text layer fully intact. This removes protection you hold the password for — it does not break encryption you do not.',
+      'Supply the password that opens the document and Convert2Any writes out a decrypted copy, keeping the text layer fully intact. This removes protection you hold the password for. It does not break encryption you do not.',
     category: 'security',
     icon: 'unlock',
     accepts: ['pdf'],
@@ -586,7 +586,7 @@ export const TOOLS: Tool[] = [
     title: 'Watermark PDF',
     short: 'Stamp text across every page at the angle and opacity you pick.',
     description:
-      'Adds a text watermark to all pages — DRAFT, CONFIDENTIAL, a client name, anything you like. The mark is drawn as real PDF content, so it scales cleanly and prints sharp.',
+      'Adds a text watermark to all pages: DRAFT, CONFIDENTIAL, a client name, anything you like. The mark is drawn as real PDF content, so it scales cleanly and prints sharp.',
     category: 'security',
     icon: 'stamp',
     accepts: ['pdf'],
