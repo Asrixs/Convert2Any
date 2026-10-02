@@ -34,6 +34,8 @@ export type IconName =
   | 'offline'
   | 'layers'
   | 'arrow-right'
+  | 'arrow-up'
+  | 'arrow-down'
   | 'menu'
   | 'close'
   | 'download';
@@ -63,6 +65,8 @@ const PATHS: Record<IconName, string[]> = {
   offline: ['M4 4l16 16', 'M8.5 16.5a5 5 0 0 1 7 0', 'M5 13a10 10 0 0 1 4-2.5', 'M19 13a10 10 0 0 0-8-2.9', 'M2 9.5a15 15 0 0 1 5-3.2', 'M22 9.5a15 15 0 0 0-9-3.4', 'M12 20h.01'],
   layers: ['m12 3 9 5-9 5-9-5z', 'm3 13 9 5 9-5', 'm3 17 9 5 9-5'],
   'arrow-right': ['M4 12h16', 'm14 6 6 6-6 6'],
+  'arrow-up': ['M12 20V4', 'm6 10 6-6 6 6'],
+  'arrow-down': ['M12 4v16', 'm6 14 6 6 6-6'],
   menu: ['M4 7h16', 'M4 12h16', 'M4 17h16'],
   close: ['m6 6 12 12', 'm18 6-12 12'],
   download: ['M12 4v12', 'm7 11 5 5 5-5', 'M4 20h16'],

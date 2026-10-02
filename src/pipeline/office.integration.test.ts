@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import * as XLSX from 'xlsx';
 import { htmlToPdf, spreadsheetToPdf } from './office';
+import { splitToFit } from './layout';
 import { pdfDrawnText as drawnText } from './testutils/pdfContent';
 
 /**
@@ -136,5 +137,70 @@ describe('runConversion with no input file', () => {
     await expect(
       runConversion([], { type: 'doc-tool', tool: 'html-to-pdf', options: { html: '   ' } }, 85),
     ).rejects.toThrow(/no files given/);
+  });
+});
+
+describe('characters and long words', () => {
+  it('draws € and the other WinAnsi extras instead of "?"', async () => {
+    // A hand-written allow-list used to turn every € into "?".
+    const text = drawnText(await htmlToPdf('<p>Totaal: €1.250 — „citaat” ™ Œuvre</p>', {}));
+    // The standard fonts use WinAnsi, where € is byte 0x80, „ 0x84, ™ 0x99, Œ 0x8C.
+    expect(text).toContain('\x801.250');
+    expect(text).toContain('\x84citaat');
+    expect(text).toContain('\x99');
+    expect(text).toContain('\x8Cuvre');
+    expect(text).not.toContain('?');
+  });
+
+  it('breaks a word wider than the line into pieces that fit', async () => {
+    const { PDFDocument: Doc, StandardFonts } = await import('pdf-lib');
+    const font = await (await Doc.create()).embedFont(StandardFonts.Helvetica);
+    const word = 'https://example.com/' + 'a'.repeat(300);
+    const pieces = splitToFit(word, font, 11, 200);
+    expect(pieces.length).toBeGreaterThan(1);
+    expect(pieces.join('')).toBe(word);
+    for (const piece of pieces) expect(font.widthOfTextAtSize(piece, 11)).toBeLessThanOrEqual(200);
+  });
+});
+
+describe('spreadsheetToPdf cell text', () => {
+  it('shows dates, currency and percentages as the spreadsheet displays them', async () => {
+    const sheet = XLSX.utils.aoa_to_sheet(
+      [
+        ['Date', 'Amount', 'Share'],
+        [new Date(Date.UTC(2026, 2, 15)), 1234.5, 0.15],
+      ],
+      { cellDates: true },
+    );
+    sheet['B2']!.z = '"€"#,##0.00';
+    sheet['C2']!.z = '0%';
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet, 'Sheet1');
+    const file = new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer]);
+
+    const text = drawnText(await spreadsheetToPdf(file, {}));
+    // Raw values used to come through: 46096.04…, 1234.5 and 0.15.
+    expect(text).toContain('3/15/26');
+    expect(text).toContain('\x801,234.50');
+    expect(text).toContain('15%');
+    expect(text).not.toContain('46096');
+  });
+
+  it('reads UTF-8 CSV as UTF-8 and keeps values exactly as written', async () => {
+    const csv = new File(['Name,Price,Code\nCafé Ü,€5.50,007\n'], 'prices.csv', { type: 'text/csv' });
+    const text = drawnText(await spreadsheetToPdf(csv, {}));
+    // Read as Latin-1 this used to come out as "CafÃ©" and "â¬5.50".
+    expect(text).toContain('Café Ü');
+    expect(text).toContain('\x805.50');
+    expect(text).toContain('007');
+  });
+
+  it('falls back to Windows-1252 for CSV exported by older Excel', async () => {
+    // "Café €5" in Windows-1252: é is 0xE9 and € is 0x80 — invalid as UTF-8.
+    const bytes = new Uint8Array([0x43, 0x61, 0x66, 0xe9, 0x2c, 0x80, 0x35, 0x0a]);
+    const csv = new File([bytes], 'export.csv', { type: 'application/vnd.ms-excel' });
+    const text = drawnText(await spreadsheetToPdf(csv, {}));
+    expect(text).toContain('Café');
+    expect(text).toContain('\x805');
   });
 });

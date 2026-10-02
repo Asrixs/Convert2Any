@@ -19,14 +19,12 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
+        // The heavy converters (pdf-lib, SheetJS, docx, …) need no entry here:
+        // only the conversion worker imports them, lazily, so they already
+        // land in their own chunks and the landing page never downloads them.
         manualChunks: {
           vendor: ['preact', 'preact-iso'],
           zip: ['fflate'],
-          // Heavy converters are split out so the landing page never
-          // downloads a PDF or spreadsheet engine it may not need.
-          pdf: ['pdf-lib'],
-          sheets: ['xlsx'],
-          docs: ['docx'],
         },
       },
     },

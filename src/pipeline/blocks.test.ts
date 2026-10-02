@@ -89,3 +89,23 @@ describe('parseHtmlBlocks', () => {
     expect(text).toContain('Body');
   });
 });
+
+describe('document chrome and entities', () => {
+  it('leaves the <title> and other non-content elements off the page', () => {
+    const blocks = parseHtmlBlocks(
+      '<html><head><title>Browser tab text</title></head><body><p>Body text</p>' +
+        '<svg><title>Icon label</title></svg><template><p>Inert</p></template></body></html>',
+    );
+    expect(blocksToText(blocks)).toBe('Body text');
+  });
+
+  it('does not swallow the document after a self-closing <svg/>', () => {
+    expect(blocksToText(parseHtmlBlocks('<svg/><p>Still here</p>'))).toBe('Still here');
+  });
+
+  it('decodes currency entities and keeps entity case', () => {
+    expect(decodeEntities('&euro;5 &pound;3')).toBe('€5 £3');
+    expect(decodeEntities('&Eacute;t&eacute;')).toBe('Été');
+    expect(decodeEntities('&AMP;')).toBe('&');
+  });
+});

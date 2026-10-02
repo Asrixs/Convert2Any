@@ -46,6 +46,6 @@ export async function downloadBlobs(outputs: OutputBlob[]): Promise<void> {
   const zipped = zipSync(zipInput);
   downloadBlob(
     new Blob([zipped.slice().buffer as ArrayBuffer], { type: 'application/zip' }),
-    'no-upload.zip',
+    'convert2any.zip',
   );
 }

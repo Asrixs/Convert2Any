@@ -1,5 +1,6 @@
 import type { OutputKind } from '../pipeline/formats';
 import { runConversion } from '../pipeline/convert';
+import { userFacingMessage } from '../pipeline/errors';
 
 export interface WorkerRequest {
   type: 'convert';
@@ -21,15 +22,12 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     const response: WorkerResponse = { type: 'result', jobId: msg.jobId, outputs };
     self.postMessage(response);
   } catch (err) {
-    // Full detail (stack included) — an empty message is undiagnosable.
-    const message =
-      err instanceof Error
-        ? `${err.message || '(no message)'}${err.stack ? ` :: ${err.stack.split('\n').slice(0, 3).join(' | ')}` : ''}`
-        : String(err);
+    // The message is shown in the queue as-is, so it must read as a sentence,
+    // not a stack trace.
     const response: WorkerResponse = {
       type: 'error',
       jobId: msg.jobId,
-      message,
+      message: userFacingMessage(err),
     };
     self.postMessage(response);
   }

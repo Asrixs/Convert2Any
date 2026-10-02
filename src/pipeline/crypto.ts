@@ -89,17 +89,24 @@ function toBytes(buffer: ArrayBuffer): Uint8Array {
 }
 
 /**
- * Encrypt a PDF. `password` is the user (open) password; `ownerPassword`
- * defaults to it when omitted, which is what people expect from "protect".
+ * Encrypt a PDF with AES-256. `password` is the user (open) password;
+ * `ownerPassword` defaults to it when omitted, which is what people expect
+ * from "protect".
+ *
+ * AES-256 is the only option on purpose. The bundled qpdf (11.x) refuses to
+ * write the older RC4-based 40- and 128-bit modes without an explicit
+ * --allow-weak-crypto, and both are considered insecure today.
+ *
+ * Passwords are used exactly as typed — no trimming — so the password that
+ * protects a file is the same one Unlock PDF will be given later.
  */
 export async function protectPdf(file: Blob, options: ToolOptions): Promise<Uint8Array> {
-  const userPassword = (options.password ?? '').trim();
-  if (userPassword === '') throw new Error('Convert2Any: a password is required');
-  const ownerPassword = (options.ownerPassword ?? '').trim() || userPassword;
-  const keyLength = options.keyLength ?? 256;
+  const userPassword = options.password ?? '';
+  if (userPassword.trim() === '') throw new Error('Convert2Any: a password is required');
+  const ownerPassword = options.ownerPassword || userPassword;
 
   const { status, log, bytes } = await runQpdf(
-    [IN, '--encrypt', userPassword, ownerPassword, String(keyLength), '--', OUT],
+    [IN, '--encrypt', userPassword, ownerPassword, '256', '--', OUT],
     toBytes(await file.arrayBuffer()),
   );
 

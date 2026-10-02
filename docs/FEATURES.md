@@ -8,9 +8,14 @@ one displayed on the tool's own page.
 ## Edit & Optimize
 
 ### Merge PDF — `/tools/merge-pdf` · **Exact**
-Joins two or more PDFs in queue order. Pages are copied with `pdf-lib`'s `copyPages`, so text
-stays selectable and quality is identical to the originals. Reader-restricted files are loaded
-with `ignoreEncryption` where possible. No file-count limit; the practical ceiling is tab memory.
+Joins two or more PDFs in the order shown in the file list, which the arrows next to each file
+change. Files added in several goes join the same merge. Pages are copied with `pdf-lib`'s
+`copyPages`, so text stays selectable and quality is identical to the originals. No file-count
+limit; the practical ceiling is tab memory.
+
+> **Encrypted input:** pdf-lib cannot decrypt, and copying pages out of an encrypted file
+> (including a "restricted" one that opens without a password) produces blank pages. Every
+> pdf-lib tool therefore refuses encrypted PDFs and points to Unlock PDF instead.
 
 ### Split PDF — `/tools/split-pdf` · **Exact**
 With an empty range, produces one single-page PDF per page, delivered as a ZIP. With a range
@@ -78,9 +83,11 @@ SheetJS reads .xlsx/.csv; each sheet becomes a titled table with real borders an
 text that flows across pages. Formulas are read as their computed values. Cell formatting,
 colours, merged cells and charts are not reproduced.
 
-### PDF to JPG — `/tools/pdf-to-jpg` · **Exact**
+### PDF to JPG — `/tools/pdf-to-jpg` · **Lossy**
 Renders every page at ~144 dpi via pdf.js into an `OffscreenCanvas`, then encodes as JPG, PNG or
-WebP. Multiple pages arrive as a ZIP.
+WebP. Multiple pages arrive as a ZIP. Pages are rendered and encoded one at a time, so a long
+PDF never holds more than one page of pixels in memory. The text in the images is not
+selectable.
 
 ### JPG to PDF — `/tools/jpg-to-pdf` · **Exact**
 Places images into one PDF, one per page. Either fits each page to its image, or standardises to
@@ -98,13 +105,15 @@ Node.
 CSS is not applied and external resources are **never fetched** — document structure is what
 converts. `<script>` and `<style>` content is discarded.
 
-### Image converter — `/tools/image-converter` · **Exact**
+### Image converter — `/tools/image-converter` · **Lossy** (PNG output is lossless)
 Converts between JPEG, PNG, WebP and HEIC (HEIC in only — browsers cannot encode it). Images are
 decoded to raw pixels and re-encoded, so **EXIF and GPS metadata cannot survive** — stripping is
 structural, not a checkbox. Orientation is baked into the pixels first, so photos stay upright.
 
 Encoding prefers the native canvas encoder and falls back to WASM codecs (`@jsquash`) where a
-browser cannot encode a format.
+browser cannot encode a format. Such a browser does not throw — it quietly returns a PNG (Safari
+does this for WebP) — so the result's type is checked before it is accepted. JPG output gets a
+white background, since transparent pixels would otherwise turn black.
 
 ### PowerPoint to PDF — `/tools/powerpoint-to-pdf` · **Not available**
 PPTX is a slide-canvas format: every element is absolutely positioned against a theme, master
@@ -117,11 +126,14 @@ Impress rather than shipping an approximation that looks plausible and is quietl
 ## Security & Extras
 
 ### Protect PDF — `/tools/protect-pdf` · **Exact**
-Real **AES-256** encryption (also AES-128 and legacy RC4-40) via qpdf compiled to WebAssembly.
-Takes a user (open) password and an optional owner password, which defaults to the user password.
+Real **AES-256** encryption via qpdf compiled to WebAssembly. Takes a user (open) password and an
+optional owner password, which defaults to the user password. Passwords are used exactly as
+typed. There is no weaker option: the RC4-based 40- and 128-bit modes are broken, and the
+bundled qpdf refuses to write them.
 
-Verified end-to-end in a browser: the output carries an `/Encrypt` dictionary, the plaintext no
-longer appears in the bytes, and the file cannot be opened without the password.
+Covered by tests that run the real qpdf WASM in Node: the output carries an AES-256 `/Encrypt`
+dictionary, the plaintext no longer appears in the bytes, a wrong password is rejected, and
+unlocking returns the original text.
 
 > The password is used in the tab and never transmitted or stored. That also means it cannot be
 > recovered — a forgotten password on a protected file is unrecoverable by anyone.
@@ -151,7 +163,10 @@ configurable — numbering can start at any value for documents continuing from 
 
 ## Cross-cutting behaviour
 
-**Batch queue.** Any tool accepts multiple files. One output downloads directly; several are
+**Batch queue.** Any tool accepts multiple files. Tools that combine files (merge, JPG to PDF)
+collect them into one job; every other tool converts each file separately. On the home page,
+queuing several PDFs or images offers a one-click "merge into one" instead of guessing. One
+output downloads directly; several are
 bundled into a single ZIP with `fflate`, and duplicate names are de-duplicated (`photo.jpg`
 becomes `photo (2).jpg`).
 
@@ -169,7 +184,7 @@ Invalid transitions are no-ops, so a stray engine event cannot corrupt the queue
 
 ## Testing
 
-120 tests, all runnable in Node with no browser:
+152 tests, all runnable in Node with no browser:
 
 - **Pure logic** — range parsing, page reordering, HTML block parsing, PDF text clustering,
   output naming, option coercion, queue transitions
@@ -179,6 +194,8 @@ Invalid transitions are no-ops, so a stray engine event cannot corrupt the queue
   HTML/spreadsheet-to-PDF run against real documents, and assertions read the drawn text back out
   of the generated PDF (inflating content streams and decoding pdf-lib's hex operands) rather than
   just checking that nothing threw
+- **Encryption** — protect/unlock round trips through the real qpdf WASM, and encrypted input to
+  the pdf-lib tools is refused rather than turned into blank pages
 
-Browser-only paths — canvas encoding, pdf.js rasterization and text extraction, and qpdf over
-HTTP — were verified by driving the built site in headless Edge.
+Browser-only paths — canvas encoding, pdf.js rasterization and text extraction — were verified
+by driving the built site in a browser.

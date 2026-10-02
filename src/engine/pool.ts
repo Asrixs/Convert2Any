@@ -26,10 +26,7 @@ export class ConversionEngine {
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
-    private readonly concurrency = Math.min(
-      Math.max(1, Math.floor((navigator.hardwareConcurrency ?? 2) / 2)),
-      4,
-    ),
+    private readonly concurrency = Math.min(Math.max(1, Math.floor(cpuCount() / 2)), 4),
     private readonly idleMs = 45_000,
   ) {}
 
@@ -48,7 +45,7 @@ export class ConversionEngine {
     for (const entry of this.pool) entry.worker.terminate();
     this.pool = [];
     // Reject anything still queued so callers never hang.
-    for (const item of this.queue) item.waiter.reject(new Error('no-upload: engine disposed'));
+    for (const item of this.queue) item.waiter.reject(new Error('Convert2Any: engine disposed'));
     this.queue = [];
   }
 
@@ -77,7 +74,7 @@ export class ConversionEngine {
         entry.waiter = null;
         worker.terminate();
         this.pool = this.pool.filter((e) => e !== entry);
-        if (waiter) waiter.reject(new Error('no-upload: worker crashed'));
+        if (waiter) waiter.reject(new Error('Convert2Any: worker crashed'));
         this.pump();
       };
       this.pool.push(entry);
@@ -108,6 +105,17 @@ export class ConversionEngine {
       }
     }, this.idleMs);
   }
+}
+
+/**
+ * Logical CPU count. The engine is created when this module loads, and the
+ * build also loads it in Node to prerender pages — where `navigator` only
+ * exists from Node 21 — so a bare `navigator` reference would crash the build.
+ */
+function cpuCount(): number {
+  return typeof navigator !== 'undefined' && navigator.hardwareConcurrency
+    ? navigator.hardwareConcurrency
+    : 2;
 }
 
 let idCounter = 0;

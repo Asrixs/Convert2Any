@@ -5,11 +5,14 @@ import { queueReducer } from '../state/queue';
 import {
   acceptedInputAttr,
   detectInput,
+  familyOf,
   isGroupingKind,
+  isMergeKind,
   kindLabel,
   supportedOutputs,
   type SupportedExtension,
 } from '../pipeline/registry';
+import { userFacingMessage } from '../pipeline/errors';
 import type { ImageOutputFormat, OutputKind, ToolOptions } from '../pipeline/formats';
 import type { Job, OutputBlob } from '../types';
 import { downloadBlobs } from '../download';
@@ -21,14 +24,17 @@ import type { Tool } from '../tools/catalog';
 /**
  * The conversion surface, used in two modes:
  *
- *  - QUICK (home page): no `tool` prop. Each file gets its own output picker,
- *    and dropping several PDFs also offers a single merge job.
+ *  - QUICK (home page): no `tool` prop. Each file gets its own output picker.
+ *    When several PDFs (or images) are queued, one button offers to combine
+ *    them into a single job — combining is never done behind the user's back.
  *  - TOOL (/tools/:slug): a `tool` is supplied, so the output kind and options
- *    come from that tool's form and the picker disappears.
+ *    come from that tool's form and the picker disappears. Tools that combine
+ *    files (Merge PDF, JPG to PDF) collect every added file into ONE job, in
+ *    an order the user can change.
  *
- * Queue state lives in the existing pure reducer; File handles and result
- * Blobs live in refs because they are neither serialisable nor comparable,
- * and keeping them out of reducer state avoids pointless re-renders.
+ * Queue state lives in the pure reducer; File handles and result Blobs live
+ * in refs because they are neither serialisable nor comparable, and keeping
+ * them out of reducer state avoids pointless re-renders.
  */
 
 export interface ConverterProps {
@@ -41,11 +47,42 @@ export interface ConverterProps {
   allowEmpty?: boolean;
 }
 
+/** Quick mode's offer to turn several single-file jobs into one. */
+interface Combiner {
+  family: 'pdf' | 'image';
+  kind: OutputKind;
+  label: (count: number) => string;
+}
+
+const COMBINERS: Combiner[] = [
+  {
+    family: 'pdf',
+    kind: { type: 'pdf-tool', tool: 'pdf-merge' },
+    label: (count) => `Merge ${count} PDFs into one`,
+  },
+  {
+    family: 'image',
+    kind: { type: 'doc-tool', tool: 'images-to-pdf' },
+    label: (count) => `Combine ${count} images into one PDF`,
+  },
+];
+
 function defaultOutput(ext: SupportedExtension): OutputKind {
   const first = supportedOutputs(ext)[0];
   if (first) return first;
   const format: ImageOutputFormat = ext === 'png' ? 'jpeg' : 'png';
   return { type: 'image', format };
+}
+
+/** "Merge 3 PDFs", "4 images → PDF". */
+function groupName(count: number, kind: OutputKind): string {
+  if (isMergeKind(kind)) return `Merge ${count} ${count === 1 ? 'PDF' : 'PDFs'}`;
+  return `${count} ${count === 1 ? 'image' : 'images'} → PDF`;
+}
+
+/** A merge of fewer than two files would just copy the file. */
+function needsMoreFiles(job: Job): boolean {
+  return job.status === 'pending' && isMergeKind(job.kind) && (job.fileNames?.length ?? 0) < 2;
 }
 
 let localId = 0;
@@ -82,13 +119,47 @@ export function Converter({
   const kindChoicesRef = useRef(new Map<string, OutputKind>());
 
   const accept = tool ? tool.accepts.map((e) => `.${e}`).join(',') : acceptedInputAttr();
-  const acceptsAll = !tool;
 
   function accepted(list: File[]): File[] {
     return list.filter((file) => {
       const ext = detectInput(file.name);
       if (!ext) return false;
-      return acceptsAll || tool!.accepts.includes(ext);
+      return !tool || tool.accepts.includes(ext);
+    });
+  }
+
+  function singleJob(file: File, kind: OutputKind): Job {
+    const id = nextId();
+    filesRef.current.set(id, [file]);
+    return { id, name: file.name, size: file.size, status: 'pending', kind };
+  }
+
+  function groupJob(files: File[], kind: OutputKind): Job {
+    const id = nextId();
+    filesRef.current.set(id, files);
+    return {
+      id,
+      name: groupName(files.length, kind),
+      size: files.reduce((sum, f) => sum + f.size, 0),
+      status: 'pending',
+      kind,
+      fileNames: files.map((f) => f.name),
+    };
+  }
+
+  /** Replace a pending combining job's files (added, removed or reordered). */
+  function setGroupFiles(job: Job, files: File[]): void {
+    if (files.length === 0) {
+      removeJob(job.id);
+      return;
+    }
+    filesRef.current.set(job.id, files);
+    dispatch({
+      type: 'set-files',
+      id: job.id,
+      name: groupName(files.length, job.kind),
+      size: files.reduce((sum, f) => sum + f.size, 0),
+      fileNames: files.map((f) => f.name),
     });
   }
 
@@ -96,114 +167,101 @@ export function Converter({
     const files = accepted(list);
     if (files.length === 0) return;
 
-    // ---- Tool mode: the tool decides grouping and the output kind.
+    // ---- Tool mode: the tool decides the output kind.
     if (tool) {
-      const newJobs: Job[] = [];
-      if (tool.multiple && files.length > 1) {
-        const id = nextId();
-        filesRef.current.set(id, files);
-        newJobs.push({
-          id,
-          name: `${files.length} files → ${tool.title}`,
-          size: files.reduce((sum, f) => sum + f.size, 0),
-          status: 'pending',
-          kind: tool.toKind(optionsRef.current ?? {}),
-        });
-      } else {
-        for (const file of files) {
-          const id = nextId();
-          filesRef.current.set(id, [file]);
-          newJobs.push({
-            id,
-            name: file.name,
-            size: file.size,
-            status: 'pending',
-            kind: tool.toKind(optionsRef.current ?? {}),
-          });
+      const kind = tool.toKind(optionsRef.current ?? {});
+      if (isGroupingKind(kind)) {
+        // Files added in several goes still form ONE merge, in the order added.
+        const open = jobsRef.current.find((job) => job.status === 'pending' && job.fileNames);
+        if (open) {
+          setGroupFiles(open, [...(filesRef.current.get(open.id) ?? []), ...files]);
+        } else {
+          dispatch({ type: 'enqueue', jobs: [groupJob(files, kind)] });
         }
+        return;
       }
-      dispatch({ type: 'enqueue', jobs: newJobs });
+      // Everything else converts each file on its own — including tools that
+      // accept several files at once, like the image converter.
+      dispatch({ type: 'enqueue', jobs: files.map((file) => singleJob(file, kind)) });
       return;
     }
 
-    // ---- Quick mode: per-file picker, plus a merge job for multiple PDFs.
-    const pdfs = files.filter((f) => detectInput(f.name) === 'pdf');
-    const newJobs: Job[] = [];
+    // ---- Quick mode: one job per file, each with its own picker.
+    dispatch({
+      type: 'enqueue',
+      jobs: files.map((file) => singleJob(file, defaultOutput(detectInput(file.name)!))),
+    });
+  }
 
-    if (pdfs.length >= 2) {
-      const id = nextId();
-      filesRef.current.set(id, pdfs);
-      newJobs.push({
-        id,
-        name: `Merge ${pdfs.length} PDFs`,
-        size: pdfs.reduce((sum, f) => sum + f.size, 0),
-        status: 'pending',
-        kind: { type: 'pdf-tool', tool: 'pdf-merge' },
-      });
-    }
+  /** Pending single-file jobs a combiner could take. */
+  function combinable(combiner: Combiner): Job[] {
+    return jobs.filter((job) => {
+      if (job.status !== 'pending' || job.fileNames) return false;
+      const ext = detectInput(job.name);
+      return ext !== null && familyOf(ext) === combiner.family;
+    });
+  }
 
-    // Every file also gets its own job, so a multi-PDF drop offers merging
-    // AND per-file conversion; users remove whichever they do not want.
-    for (const file of files) {
-      const ext = detectInput(file.name)!;
-      const id = nextId();
-      filesRef.current.set(id, [file]);
-      newJobs.push({
-        id,
-        name: file.name,
-        size: file.size,
-        status: 'pending',
-        kind: defaultOutput(ext),
-      });
+  function combine(combiner: Combiner): void {
+    const picked = combinable(combiner);
+    const files = picked.flatMap((job) => filesRef.current.get(job.id) ?? []);
+    if (files.length < 2) return;
+    for (const job of picked) removeJob(job.id);
+    dispatch({ type: 'enqueue', jobs: [groupJob(files, combiner.kind)] });
+  }
+
+  function moveFile(job: Job, index: number, delta: -1 | 1): void {
+    const files = [...(filesRef.current.get(job.id) ?? [])];
+    const target = index + delta;
+    if (target < 0 || target >= files.length) return;
+    [files[index], files[target]] = [files[target]!, files[index]!];
+    setGroupFiles(job, files);
+  }
+
+  function removeFile(job: Job, index: number): void {
+    const files = (filesRef.current.get(job.id) ?? []).filter((_, i) => i !== index);
+    setGroupFiles(job, files);
+  }
+
+  async function runPasted(currentOptions: ToolOptions): Promise<void> {
+    if (!tool) return;
+    const kind = tool.toKind(currentOptions);
+    const id = nextId();
+    dispatch({ type: 'enqueue', jobs: [{ id, name: tool.title, size: 0, status: 'pending', kind }] });
+    dispatch({ type: 'status', id, status: 'converting' });
+    try {
+      const outputs = await engine.convert([], kind, qualityRef.current);
+      outputsRef.current.set(id, outputs);
+      dispatch({ type: 'status', id, status: 'done' });
+      dispatch({ type: 'outputs', id, names: outputs.map((o) => o.name) });
+    } catch (err) {
+      dispatch({ type: 'status', id, status: 'error', error: userFacingMessage(err) });
     }
-    dispatch({ type: 'enqueue', jobs: newJobs });
   }
 
   async function runAll(): Promise<void> {
     const currentOptions = optionsRef.current ?? {};
+    const runnable = jobsRef.current.filter(
+      (job) => job.status === 'pending' && !needsMoreFiles(job),
+    );
 
-    // A tool that needs no file (pasted HTML) still runs once.
-    if (allowEmpty && jobsRef.current.length === 0 && tool) {
+    // A tool that needs no file (pasted HTML) runs on the pasted markup — as
+    // often as the user likes, not just the first time.
+    if (allowEmpty && tool && runnable.length === 0) {
       setRunning(true);
       try {
-        const outputs = await engine.convert([], tool.toKind(currentOptions), qualityRef.current);
-        const id = nextId();
-        dispatch({
-          type: 'enqueue',
-          jobs: [
-            { id, name: tool.title, size: 0, status: 'pending', kind: tool.toKind(currentOptions) },
-          ],
-        });
-        outputsRef.current.set(id, outputs);
-        dispatch({ type: 'status', id, status: 'converting' });
-        dispatch({ type: 'status', id, status: 'done' });
-        dispatch({ type: 'outputs', id, names: outputs.map((o) => o.name) });
-      } catch (err) {
-        const id = nextId();
-        dispatch({
-          type: 'enqueue',
-          jobs: [
-            { id, name: tool.title, size: 0, status: 'pending', kind: tool.toKind(currentOptions) },
-          ],
-        });
-        dispatch({
-          type: 'status',
-          id,
-          status: 'error',
-          error: err instanceof Error ? err.message : 'Conversion failed',
-        });
+        await runPasted(currentOptions);
       } finally {
         setRunning(false);
       }
       return;
     }
 
-    const pending = jobsRef.current.filter((j) => j.status === 'pending');
-    if (pending.length === 0) return;
+    if (runnable.length === 0) return;
     setRunning(true);
 
     await Promise.allSettled(
-      pending.map(async (job) => {
+      runnable.map(async (job) => {
         const files = filesRef.current.get(job.id);
         if (!files || files.length === 0) {
           dispatch({ type: 'status', id: job.id, status: 'error', error: 'File handle lost' });
@@ -228,213 +286,266 @@ export function Converter({
           dispatch({ type: 'status', id: job.id, status: 'done' });
           dispatch({ type: 'outputs', id: job.id, names: outputs.map((o) => o.name) });
         } catch (err) {
-          dispatch({
-            type: 'status',
-            id: job.id,
-            status: 'error',
-            error: err instanceof Error ? err.message : 'Conversion failed',
-          });
+          dispatch({ type: 'status', id: job.id, status: 'error', error: userFacingMessage(err) });
         }
       }),
     );
     setRunning(false);
   }
 
-  function removeJob(id: string): void {
+  function forget(id: string): void {
     filesRef.current.delete(id);
     outputsRef.current.delete(id);
+    kindChoicesRef.current.delete(id);
+  }
+
+  function removeJob(id: string): void {
+    forget(id);
     dispatch({ type: 'remove', id });
+  }
+
+  function clearFinished(): void {
+    // Drop the files and results too, or they stay in memory until the page closes.
+    for (const job of jobs) {
+      if (job.status === 'done' || job.status === 'error') forget(job.id);
+    }
+    dispatch({ type: 'clear-finished' });
   }
 
   const doneOutputs = (): OutputBlob[] =>
     jobs.flatMap((job) => (job.status === 'done' ? (outputsRef.current.get(job.id) ?? []) : []));
 
-  const pendingCount = jobs.filter((j) => j.status === 'pending').length;
+  const runnableCount = jobs.filter((j) => j.status === 'pending' && !needsMoreFiles(j)).length;
   const hasDone = jobs.some((j) => j.status === 'done');
   const doneCount = jobs.filter((j) => j.status === 'done').length;
   const errorCount = jobs.filter((j) => j.status === 'error').length;
-  const canRun = !running && !disabled && (pendingCount > 0 || (allowEmpty && jobs.length === 0));
+  const hasFinished = doneCount + errorCount > 0;
+  const canRun = !running && !disabled && (runnableCount > 0 || allowEmpty);
+  const offers = tool ? [] : COMBINERS.filter((c) => combinable(c).length >= 2);
 
   return (
-    <div class="stack" style="gap:var(--s-5)">
+    <div class="converter">
       <Dropzone
         onFiles={addFiles}
         accept={accept}
         multiple={tool ? tool.multiple : true}
-        title={tool ? `Select a file for ${tool.title}` : 'Select your file to convert'}
+        title={tool ? `Choose ${tool.multiple ? 'files' : 'a file'}` : 'Choose files to convert'}
         hint={
           tool
-            ? `Accepts ${tool.accepts.map((e) => e.toUpperCase()).join(' · ')}`
-            : 'or drop it here. Images, PDFs, Office documents and HTML.'
+            ? `or drop ${tool.multiple ? 'them' : 'it'} here · ${tool.accepts.map((e) => e.toUpperCase()).join(', ')}`
+            : 'or drop them here · images, PDFs, Word, Excel and HTML'
         }
       />
 
       {/* Announce queue progress without stealing focus. */}
       <p class="visually-hidden" role="status" aria-live="polite">
         {running
-          ? `Converting ${pendingCount} files`
+          ? `Converting ${runnableCount} files`
           : `${jobs.length} queued, ${doneCount} finished, ${errorCount} failed`}
       </p>
 
       {jobs.length > 0 && (
-        <>
-          <div class="queue-scroll">
-            <table class="queue" data-testid="queue">
-              <thead>
-                <tr>
-                  <th scope="col">File</th>
-                  <th scope="col">Output</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">
-                    <span class="visually-hidden">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {jobs.map((job) => (
-                  <tr key={job.id} data-testid="job-row" data-status={job.status}>
-                    <td>
-                      <div class="queue-name">{job.name}</div>
-                      {job.size > 0 && <div class="small muted">{formatBytes(job.size)}</div>}
-                      {job.error && <div class="small" style="color:var(--err)">{job.error}</div>}
-                      {job.status === 'done' && job.outputNames && (
-                        <div class="small muted">→ {job.outputNames.join(', ')}</div>
-                      )}
-                    </td>
-                    <td>
-                      {tool ? (
-                        // In tool mode the run uses the CURRENT form options,
-                        // so label the job from those too — the kind stored
-                        // when the file was added goes stale as soon as an
-                        // option changes (showing "Rotate 90°" for a 180 job).
-                        <span class="small muted">{kindLabel(tool.toKind(options ?? {}))}</span>
-                      ) : job.status === 'pending' ? (
-                        <select
-                          class="select"
-                          aria-label={`Output for ${job.name}`}
-                          data-testid={isGroupingKind(job.kind) ? 'merge-picker' : 'picker'}
-                          value={JSON.stringify(job.kind)}
-                          onChange={(e: JSX.TargetedEvent<HTMLSelectElement>) => {
-                            const kind = JSON.parse(e.currentTarget.value) as OutputKind;
-                            kindChoicesRef.current.set(job.id, kind);
-                            dispatch({ type: 'set-kind', id: job.id, kind });
-                          }}
-                        >
-                          {pickerOptions(job).map((kind) => (
-                            <option key={JSON.stringify(kind)} value={JSON.stringify(kind)}>
-                              {kindLabel(kind)}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span class="small muted">{kindLabel(job.kind)}</span>
-                      )}
-                    </td>
-                    <td>
-                      <span class={`chip chip-${job.status}`}>{job.status}</span>
-                    </td>
-                    <td>
-                      <div class="queue-actions">
-                        {job.status === 'done' && (
-                          <Button
-                            size="sm"
-                            icon="download"
-                            data-testid="download-one"
-                            onClick={() => void downloadBlobs(outputsRef.current.get(job.id) ?? [])}
-                          >
-                            Save
-                          </Button>
-                        )}
-                        {(job.status === 'pending' || job.status === 'error') && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            aria-label={`Remove ${job.name}`}
-                            onClick={() => removeJob(job.id)}
-                          >
-                            <Icon name="close" size={14} />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <ul class="queue" data-testid="queue" aria-label="Queued files">
+          {jobs.map((job) => (
+            <li key={job.id} class="queue-item" data-testid="job-row" data-status={job.status}>
+              <div class="queue-main">
+                <div class="queue-title">
+                  <span class="queue-name">{job.name}</span>
+                  <span class={`status status-${job.status}`}>{STATUS_LABEL[job.status]}</span>
+                </div>
+                <div class="queue-meta">
+                  {job.size > 0 && <span>{formatBytes(job.size)}</span>}
+                  {job.status === 'done' && job.outputNames && (
+                    <span class="queue-output">→ {job.outputNames.join(', ')}</span>
+                  )}
+                </div>
 
-          {showsQuality(jobs, tool) && (
-            <div class="field">
-              <label class="field-label" for="quality">
-                Image quality — {quality}
-              </label>
-              <div class="range-row">
-                <input
-                  id="quality"
-                  class="range"
-                  type="range"
-                  min={1}
-                  max={100}
-                  value={quality}
-                  data-testid="quality"
-                  onInput={(e: JSX.TargetedEvent<HTMLInputElement>) =>
-                    setQuality(Number(e.currentTarget.value))
-                  }
-                />
-                <output class="range-value">{quality}</output>
+                {job.fileNames && (
+                  <ol class="queue-files" aria-label={`Files in ${job.name}, in order`}>
+                    {job.fileNames.map((name, index) => (
+                      <li key={`${index}-${name}`} class="queue-file">
+                        <span class="queue-file-index" aria-hidden="true">
+                          {index + 1}
+                        </span>
+                        <span class="queue-file-name">{name}</span>
+                        {job.status === 'pending' && (
+                          <span class="queue-file-actions">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              class="btn-icon"
+                              aria-label={`Move ${name} up`}
+                              disabled={index === 0}
+                              onClick={() => moveFile(job, index, -1)}
+                            >
+                              <Icon name="arrow-up" size={16} />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              class="btn-icon"
+                              aria-label={`Move ${name} down`}
+                              disabled={index === job.fileNames!.length - 1}
+                              onClick={() => moveFile(job, index, 1)}
+                            >
+                              <Icon name="arrow-down" size={16} />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              class="btn-icon"
+                              aria-label={`Remove ${name}`}
+                              onClick={() => removeFile(job, index)}
+                            >
+                              <Icon name="close" size={16} />
+                            </Button>
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+
+                {needsMoreFiles(job) && (
+                  <p class="queue-hint">Add at least one more PDF to merge.</p>
+                )}
+                {job.error && <p class="queue-error">{job.error}</p>}
               </div>
-              <p class="field-help">Applies to lossy formats (JPG and WebP).</p>
-            </div>
-          )}
-        </>
+
+              <div class="queue-side">
+                {tool || job.fileNames || job.status !== 'pending' ? (
+                  // In tool mode the run uses the CURRENT form options, so the
+                  // label comes from those too — the kind stored when the file
+                  // was added goes stale as soon as an option changes.
+                  <span class="queue-kind">
+                    {kindLabel(tool ? tool.toKind(options ?? {}) : job.kind)}
+                  </span>
+                ) : (
+                  <select
+                    class="select select-sm"
+                    aria-label={`Output for ${job.name}`}
+                    data-testid="picker"
+                    value={JSON.stringify(job.kind)}
+                    onChange={(e: JSX.TargetedEvent<HTMLSelectElement>) => {
+                      const kind = JSON.parse(e.currentTarget.value) as OutputKind;
+                      kindChoicesRef.current.set(job.id, kind);
+                      dispatch({ type: 'set-kind', id: job.id, kind });
+                    }}
+                  >
+                    {supportedOutputs(detectInput(job.name) ?? 'png').map((kind) => (
+                      <option key={JSON.stringify(kind)} value={JSON.stringify(kind)}>
+                        {kindLabel(kind)}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <div class="queue-actions">
+                  {job.status === 'done' && (
+                    <Button
+                      size="sm"
+                      icon="download"
+                      data-testid="download-one"
+                      onClick={() => void downloadBlobs(outputsRef.current.get(job.id) ?? [])}
+                    >
+                      Save
+                    </Button>
+                  )}
+                  {(job.status === 'pending' || job.status === 'error') && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      class="btn-icon"
+                      aria-label={`Remove ${job.name}`}
+                      onClick={() => removeJob(job.id)}
+                    >
+                      <Icon name="close" size={16} />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
 
-      <div class="row">
+      {offers.length > 0 && (
+        <div class="row">
+          {offers.map((combiner) => (
+            <Button
+              key={combiner.family}
+              variant="ghost"
+              icon="merge"
+              data-testid={`combine-${combiner.family}`}
+              onClick={() => combine(combiner)}
+            >
+              {combiner.label(combinable(combiner).length)}
+            </Button>
+          ))}
+        </div>
+      )}
+
+      {jobs.length > 0 && showsQuality(jobs, tool) && (
+        <div class="field">
+          <label class="field-label" for="quality">
+            Image quality
+          </label>
+          <div class="range-row">
+            <input
+              id="quality"
+              class="range"
+              type="range"
+              min={1}
+              max={100}
+              value={quality}
+              data-testid="quality"
+              onInput={(e: JSX.TargetedEvent<HTMLInputElement>) =>
+                setQuality(Number(e.currentTarget.value))
+              }
+            />
+            <output class="range-value" for="quality">
+              {quality}
+            </output>
+          </div>
+          <p class="field-help">Applies to JPG and WebP. PNG is always lossless.</p>
+        </div>
+      )}
+
+      {disabled && (jobs.length > 0 || allowEmpty) && (
+        <Notice tone="error" icon="close">
+          Fill in the required options above before converting.
+        </Notice>
+      )}
+
+      <div class="converter-actions">
         <Button
           variant="primary"
           data-testid="run-all"
           disabled={!canRun}
           onClick={() => void runAll()}
         >
-          {running ? 'Converting…' : pendingCount > 0 ? `Convert ${pendingCount}` : 'Convert'}
+          {running ? 'Converting…' : runnableCount > 1 ? `Convert ${runnableCount} files` : 'Convert'}
         </Button>
-        <Button
-          icon="download"
-          data-testid="download-all"
-          disabled={!hasDone}
-          onClick={() => void downloadBlobs(doneOutputs())}
-        >
-          Download all
-        </Button>
-        {jobs.length > 0 && (
-          <Button
-            variant="ghost"
-            data-testid="clear-finished"
-            onClick={() => dispatch({ type: 'clear-finished' })}
-          >
+        {hasDone && (
+          <Button icon="download" data-testid="download-all" onClick={() => void downloadBlobs(doneOutputs())}>
+            {doneCount > 1 ? 'Download all (.zip)' : 'Download'}
+          </Button>
+        )}
+        {hasFinished && (
+          <Button variant="ghost" data-testid="clear-finished" onClick={clearFinished}>
             Clear finished
           </Button>
         )}
       </div>
-
-      {disabled && (
-        <Notice tone="error" icon="close">
-          Fill in the required options above before converting.
-        </Notice>
-      )}
     </div>
   );
 }
 
-/** Output choices for one quick-mode job. */
-function pickerOptions(job: Job): OutputKind[] {
-  if (isGroupingKind(job.kind)) {
-    // A grouped job must not offer per-file image outputs.
-    return supportedOutputs('pdf').filter((k) => k.type === 'pdf-tool');
-  }
-  const ext = detectInput(job.name);
-  return supportedOutputs(ext ?? 'png');
-}
+const STATUS_LABEL: Record<Job['status'], string> = {
+  pending: 'Ready',
+  converting: 'Converting',
+  done: 'Done',
+  error: 'Failed',
+};
 
 /** The quality slider only matters when something encodes an image. */
 function showsQuality(jobs: Job[], tool?: Tool): boolean {

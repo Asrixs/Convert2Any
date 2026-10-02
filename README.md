@@ -23,9 +23,9 @@ A browser-only converter has real limits, and the UI names them rather than hidi
 
 | Tier | Meaning | Tools |
 | --- | --- | --- |
-| **Exact** | Lossless — page content is copied, never re-rendered | merge, split, rotate, reorder, delete, watermark, page numbers, protect, unlock, PDF→JPG, JPG→PDF, image converter |
+| **Exact** | Lossless — page content is copied, never re-rendered | merge, split, rotate, reorder, delete, watermark, page numbers, protect, unlock, JPG→PDF |
 | **Text-fidelity** | Text, headings, lists and tables survive; exact visual layout does not | PDF→Word, Word→PDF, PDF→Excel, Excel→PDF, HTML→PDF |
-| **Lossy** | Pages are re-rendered as images, so text stops being selectable | compress |
+| **Lossy** | Re-encoded as images, so some detail is lost | compress, PDF→JPG, image converter (JPG/WebP output) |
 | **Not available** | Cannot be done in a browser without a server | PowerPoint |
 
 PowerPoint is deliberately absent. PPTX is a slide-canvas format whose layout needs a real
@@ -45,9 +45,9 @@ subpoena, or misconfigure.
 
 **You can verify this in about thirty seconds:**
 
-1. Open devtools → Network, convert a file. No request carries your data.
-2. Load the page, disconnect from the network entirely, convert something. It still works.
-3. Read the source. There is no endpoint to find.
+1. Open devtools → Network, convert a file. Every request is for the app's own code
+   (scripts, WebAssembly, fonts); none carries your data.
+2. Read the source. There is no endpoint to find.
 
 Metadata stripping is structural rather than a setting: images are decoded to raw pixels and
 re-encoded from those pixels, so EXIF and GPS cannot travel from input to output.
@@ -118,7 +118,7 @@ Strict dark mode built on four brand colours, used exactly as specified:
 | `--c-red` | `#FF0000` | primary CTA, active icons, badges |
 
 Headings are `#FFFFFF`, body text `#E0E0E0`. Typeface is **Inter**, self-hosted via
-`@fontsource-variable/inter` so the site makes no third-party requests and works offline.
+`@fontsource-variable/inter` so the site makes no third-party requests.
 
 Two derived tints exist purely for accessibility, and are documented where they are defined in
 `src/styles/tokens.css`:

@@ -70,7 +70,6 @@ export interface ToolOptions {
   /** pdf-protect / pdf-unlock */
   password?: string;
   ownerPassword?: string;
-  keyLength?: 40 | 128 | 256;
   /** images-to-pdf */
   pageSize?: 'fit' | 'a4' | 'letter';
   orientation?: 'portrait' | 'landscape';

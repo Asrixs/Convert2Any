@@ -8,7 +8,7 @@ import {
   imagesToPdf,
   mergePdfs,
   numberPdf,
-  pdfToImageBitmaps,
+  renderPdfPages,
   reorderPdf,
   rotatePdf,
   splitPdf,
@@ -68,23 +68,20 @@ export async function runConversion(
   const ext = requireExtension(first.name);
 
   if (ext === 'pdf') {
-    const bitmaps = await pdfToImageBitmaps(first);
+    // Pages are rendered and encoded one at a time, so a long PDF never holds
+    // more than one page of pixels in memory.
     const outputs: OutputFile[] = [];
-    try {
-      for (const [index, pageBitmap] of bitmaps.entries()) {
-        try {
-          outputs.push({
-            name: pageImageName(first.name, kind.format, index),
-            blob: await encodeStripped(pageBitmap, kind.format, quality),
-          });
-        } finally {
-          pageBitmap.close();
-        }
+    let index = 0;
+    for await (const pageBitmap of renderPdfPages(first)) {
+      try {
+        outputs.push({
+          name: pageImageName(first.name, kind.format, index),
+          blob: await encodeStripped(pageBitmap, kind.format, quality),
+        });
+      } finally {
+        pageBitmap.close();
       }
-    } catch (err) {
-      // Close anything still open on failure so bitmaps never leak.
-      for (const bitmap of bitmaps) bitmap.close();
-      throw err;
+      index += 1;
     }
     return outputs;
   }

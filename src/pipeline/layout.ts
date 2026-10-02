@@ -50,7 +50,13 @@ interface Word {
  * Greedy word wrap across styled runs. Runs are split into words so a bold
  * phrase mid-sentence wraps at the right place instead of jumping a line.
  */
-function wrap(runs: Run[], fonts: Fonts, size: number, maxWidth: number): Word[][] {
+function wrap(
+  runs: Run[],
+  fonts: Fonts,
+  size: number,
+  maxWidth: number,
+  clean: (text: string) => string,
+): Word[][] {
   const lines: Word[][] = [];
   let line: Word[] = [];
   let lineWidth = 0;
@@ -59,33 +65,28 @@ function wrap(runs: Run[], fonts: Fonts, size: number, maxWidth: number): Word[]
     const font = pick(fonts, run);
     const pieces = run.text.split(/(\s+)/).filter((p) => p !== '');
     for (const piece of pieces) {
-      const isSpace = /^\s+$/.test(piece);
-      const text = isSpace ? ' ' : piece;
-      let width: number;
-      try {
-        width = font.widthOfTextAtSize(text, size);
-      } catch {
-        // WinAnsi cannot encode every character; fall back to an estimate
-        // rather than aborting the whole document.
-        width = size * 0.5 * text.length;
-      }
-      if (isSpace) {
+      if (/^\s+$/.test(piece)) {
         if (line.length === 0) continue;
-        line.push({ text, font, width });
+        const width = font.widthOfTextAtSize(' ', size);
+        line.push({ text: ' ', font, width });
         lineWidth += width;
         continue;
       }
-      if (lineWidth + width > maxWidth && line.length > 0) {
-        // Drop a trailing space before breaking.
-        while (line.length > 0 && line[line.length - 1]!.text === ' ') {
-          lineWidth -= line.pop()!.width;
+      // Clean BEFORE measuring, so the width is that of what gets drawn.
+      for (const text of splitToFit(clean(piece), font, size, maxWidth)) {
+        const width = font.widthOfTextAtSize(text, size);
+        if (lineWidth + width > maxWidth && line.length > 0) {
+          // Drop a trailing space before breaking.
+          while (line.length > 0 && line[line.length - 1]!.text === ' ') {
+            lineWidth -= line.pop()!.width;
+          }
+          lines.push(line);
+          line = [];
+          lineWidth = 0;
         }
-        lines.push(line);
-        line = [];
-        lineWidth = 0;
+        line.push({ text, font, width });
+        lineWidth += width;
       }
-      line.push({ text, font, width });
-      lineWidth += width;
     }
   }
   if (line.length > 0) lines.push(line);
@@ -93,18 +94,44 @@ function wrap(runs: Run[], fonts: Fonts, size: number, maxWidth: number): Word[]
 }
 
 /**
- * Replace characters the standard WinAnsi fonts cannot encode.
- *
- * The allowed set is written with escapes rather than literal glyphs so no
- * invisible character can hide inside the class: tab/LF/CR, printable ASCII,
- * Latin-1, and the typographic marks WinAnsi adds (smart quotes, en/em dash,
- * bullet, ellipsis).
+ * Break a word wider than the line (a long URL, an ID in a narrow table
+ * column) into pieces that fit, instead of letting it run off the page.
+ * Character widths are summed rather than re-measured, so this stays linear.
  */
-function sanitize(text: string): string {
-  const ENCODABLE =
-    // eslint-disable-next-line no-control-regex -- tab/LF/CR are intentionally kept
-    /[^\x09\x0a\x0d\x20-\x7e\u00a0-\u00ff\u2018\u2019\u201c\u201d\u2013\u2014\u2022\u2026]/g;
-  return text.replace(ENCODABLE, '?');
+export function splitToFit(word: string, font: PDFFont, size: number, maxWidth: number): string[] {
+  if (font.widthOfTextAtSize(word, size) <= maxWidth) return [word];
+  const pieces: string[] = [];
+  let piece = '';
+  let width = 0;
+  for (const ch of word) {
+    const charWidth = font.widthOfTextAtSize(ch, size);
+    if (piece !== '' && width + charWidth > maxWidth) {
+      pieces.push(piece);
+      piece = '';
+      width = 0;
+    }
+    piece += ch;
+    width += charWidth;
+  }
+  if (piece !== '') pieces.push(piece);
+  return pieces;
+}
+
+/**
+ * Build a cleaner that swaps characters the standard PDF fonts cannot draw
+ * for "?". The drawable set comes from the font itself (WinAnsi: ASCII,
+ * Latin-1 and extras such as \u20ac \u201e \u2122 \u0152 \u0160), so nothing drawable is thrown away
+ * \u2014 a hand-written list is how "\u20ac" once came out as "?". Tabs become spaces.
+ */
+function makeCleaner(font: PDFFont): (text: string) => string {
+  const drawable = new Set(font.getCharacterSet());
+  return (text) => {
+    let out = '';
+    for (const ch of text.replace(/\t/g, '    ')) {
+      out += drawable.has(ch.codePointAt(0)!) ? ch : '?';
+    }
+    return out;
+  };
 }
 
 /** Render blocks into a fresh PDF document. */
@@ -123,6 +150,8 @@ export async function renderBlocksToPdf(
     boldItalic: await doc.embedFont(StandardFonts.HelveticaBoldOblique),
     mono: await doc.embedFont(StandardFonts.Courier),
   };
+  // Every standard font here shares the WinAnsi encoding, so one cleaner fits all.
+  const clean = makeCleaner(fonts.regular);
 
   const [pageWidth, pageHeight] = SIZES[options.pageSize ?? 'a4'];
   const margin = options.margin ?? 56;
@@ -145,11 +174,8 @@ export async function renderBlocksToPdf(
       ensureSpace(leading);
       let x = margin + indent;
       for (const word of line) {
-        try {
-          page.drawText(sanitize(word.text), { x, y: y - size, size, font: word.font, color: black });
-        } catch {
-          // A single unencodable word must not abort the document.
-        }
+        // Words were cleaned in wrap(), so every character is drawable.
+        page.drawText(word.text, { x, y: y - size, size, font: word.font, color: black });
         x += word.width;
       }
       y -= leading;
@@ -162,31 +188,27 @@ export async function renderBlocksToPdf(
         const size = base * (HEADING_SCALE[block.level] ?? 1);
         y -= size * 0.5;
         const runs = block.runs.map((r) => ({ ...r, bold: true }));
-        drawLines(wrap(runs, fonts, size, maxWidth), size, 0, size * 1.35);
+        drawLines(wrap(runs, fonts, size, maxWidth, clean), size, 0, size * 1.35);
         y -= size * 0.25;
         break;
       }
       case 'paragraph': {
-        drawLines(wrap(block.runs, fonts, base, maxWidth), base, 0, base * 1.5);
+        drawLines(wrap(block.runs, fonts, base, maxWidth, clean), base, 0, base * 1.5);
         y -= base * 0.5;
         break;
       }
       case 'list-item': {
         const indent = base * 1.6;
-        const lines = wrap(block.runs, fonts, base, maxWidth - indent);
+        const lines = wrap(block.runs, fonts, base, maxWidth - indent, clean);
         // Draw the marker on the first line only, then indent the rest.
         ensureSpace(base * 1.5);
-        try {
-          page.drawText(sanitize(block.marker), {
-            x: margin,
-            y: y - base,
-            size: base,
-            font: fonts.regular,
-            color: black,
-          });
-        } catch {
-          /* marker is decorative */
-        }
+        page.drawText(clean(block.marker), {
+          x: margin,
+          y: y - base,
+          size: base,
+          font: fonts.regular,
+          color: black,
+        });
         drawLines(lines, base, indent, base * 1.5);
         break;
       }
@@ -203,19 +225,15 @@ export async function renderBlocksToPdf(
       }
       case 'pre': {
         const size = base * 0.9;
-        for (const rawLine of block.text.split('\n')) {
+        for (const rawLine of block.text.split(/\r?\n/)) {
           ensureSpace(size * 1.4);
-          try {
-            page.drawText(sanitize(rawLine), {
-              x: margin,
-              y: y - size,
-              size,
-              font: fonts.mono,
-              color: black,
-            });
-          } catch {
-            /* skip unencodable line */
-          }
+          page.drawText(clean(rawLine), {
+            x: margin,
+            y: y - size,
+            size,
+            font: fonts.mono,
+            color: black,
+          });
           y -= size * 1.4;
         }
         y -= base * 0.5;
@@ -241,7 +259,13 @@ export async function renderBlocksToPdf(
       const font = isHeader ? fonts.bold : fonts.regular;
       // Height is driven by the tallest wrapped cell in the row.
       const cellLines = Array.from({ length: columns }, (_, c) =>
-        wrap([{ text: row[c] ?? '' }], { ...fonts, regular: font }, size, colWidth - padding * 2),
+        wrap(
+          [{ text: row[c] ?? '' }],
+          { ...fonts, regular: font },
+          size,
+          colWidth - padding * 2,
+          clean,
+        ),
       );
       const rowHeight = Math.max(...cellLines.map((l) => l.length)) * size * 1.35 + padding * 2;
       ensureSpace(rowHeight);
@@ -261,17 +285,7 @@ export async function renderBlocksToPdf(
         for (const line of cellLines[c] ?? []) {
           let tx = x + padding;
           for (const word of line) {
-            try {
-              page.drawText(sanitize(word.text), {
-                x: tx,
-                y: ty - size,
-                size,
-                font: word.font,
-                color: black,
-              });
-            } catch {
-              /* skip */
-            }
+            page.drawText(word.text, { x: tx, y: ty - size, size, font: word.font, color: black });
             tx += word.width;
           }
           ty -= size * 1.35;

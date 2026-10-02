@@ -88,3 +88,24 @@ describe('queueReducer', () => {
     expect(cleared.jobs.map((j) => j.id)).toEqual(['j1']);
   });
 });
+
+describe('set-files', () => {
+  const group = job({ id: 'g', name: 'Merge 2 PDFs', fileNames: ['a.pdf', 'b.pdf'] });
+
+  it('updates a pending job’s file list, name and size', () => {
+    const next = queueReducer(state([group]), {
+      type: 'set-files',
+      id: 'g',
+      name: 'Merge 3 PDFs',
+      size: 30,
+      fileNames: ['b.pdf', 'a.pdf', 'c.pdf'],
+    });
+    expect(next.jobs[0]).toMatchObject({ name: 'Merge 3 PDFs', size: 30, fileNames: ['b.pdf', 'a.pdf', 'c.pdf'] });
+  });
+
+  it('leaves a job alone once it has started', () => {
+    const s = state([{ ...group, status: 'converting' }]);
+    const next = queueReducer(s, { type: 'set-files', id: 'g', name: 'x', size: 1, fileNames: [] });
+    expect(next).toBe(s);
+  });
+});

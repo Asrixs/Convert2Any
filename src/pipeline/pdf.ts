@@ -3,17 +3,37 @@
  * rasterization via pdf.js. Both libraries are lazy-imported so the initial
  * bundle never pays for them.
  */
+import type { PDFFont, PDFPage } from 'pdf-lib';
 import type { NumberPosition, ToolOptions, WatermarkPosition } from './formats';
 import { formatPageLabel, keepAfterDelete, normalizeOrder, parseRanges } from './pages';
+import { centredTextOrigin, visualFrame } from './placement';
 
 async function loadPdfLib() {
   return import('pdf-lib');
 }
 
-/** Load a document, tolerating reader-restricted (but not encrypted) files. */
+/**
+ * Load a document for structural editing.
+ *
+ * pdf-lib cannot decrypt. Loading an encrypted file anyway (ignoreEncryption)
+ * appears to work, but every copied page keeps its encrypted content with no
+ * key to read it, so the output comes out blank. That includes PDFs that open
+ * without a password but carry editing restrictions — those are encrypted
+ * too. Refusing with a clear next step beats handing back an empty document.
+ */
 async function load(file: Blob) {
   const { PDFDocument } = await loadPdfLib();
-  return PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true });
+  // Load with ignoreEncryption and test the flag ourselves: pdf-lib's own
+  // EncryptedPDFError is compiled to ES5, so `instanceof` cannot recognise it.
+  const doc = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true });
+  if (doc.isEncrypted) {
+    const name = typeof File !== 'undefined' && file instanceof File ? ` "${file.name}"` : '';
+    throw new Error(
+      `Convert2Any: the PDF${name} is password-protected or has editing restrictions, so its ` +
+        'pages cannot be changed here. If you have the password, remove it with Unlock PDF first.',
+    );
+  }
+  return doc;
 }
 
 /** Merge PDFs in the given order. Rejects an empty list. */
@@ -22,10 +42,7 @@ export async function mergePdfs(files: Blob[]): Promise<Uint8Array> {
   const { PDFDocument } = await loadPdfLib();
   const out = await PDFDocument.create();
   for (const file of files) {
-    const src = await PDFDocument.load(await file.arrayBuffer(), {
-      // Skip encryption errors on reader-restricted PDFs where possible.
-      ignoreEncryption: true,
-    });
+    const src = await load(file);
     const pages = await out.copyPages(src, src.getPageIndices());
     pages.forEach((page) => out.addPage(page));
   }
@@ -99,16 +116,47 @@ export async function deletePdfPages(file: Blob, pages: number[]): Promise<Uint8
   return out.save();
 }
 
+/** Helvetica's cap height as a fraction of the font size — what we centre on. */
+const CAP_HEIGHT = 0.72;
+
+/**
+ * Where the watermark's centre aims, in the page's visual frame. Corners aim
+ * at the very corner; the margin clamp in centredTextOrigin then pulls the
+ * rotated text back inside the page, so long text never runs off the edge.
+ */
 const WATERMARK_ANCHORS: Record<
   WatermarkPosition,
   (w: number, h: number) => { x: number; y: number }
 > = {
   center: (w, h) => ({ x: w / 2, y: h / 2 }),
-  'top-left': (_w, h) => ({ x: 60, y: h - 60 }),
-  'top-right': (w, h) => ({ x: w - 60, y: h - 60 }),
-  'bottom-left': () => ({ x: 60, y: 60 }),
-  'bottom-right': (w) => ({ x: w - 60, y: 60 }),
+  'top-left': (_w, h) => ({ x: 0, y: h }),
+  'top-right': (w, h) => ({ x: w, y: h }),
+  'bottom-left': () => ({ x: 0, y: 0 }),
+  'bottom-right': (w) => ({ x: w, y: 0 }),
 };
+
+const WATERMARK_MARGIN = 36;
+
+/**
+ * The standard PDF fonts only cover Western European text. Measuring or
+ * drawing anything else throws deep inside pdf-lib, so check up front and
+ * say which characters are the problem.
+ */
+function assertDrawable(font: PDFFont, text: string, what: string): void {
+  const supported = new Set(font.getCharacterSet());
+  const missing = [...new Set([...text].filter((ch) => !supported.has(ch.codePointAt(0)!)))];
+  if (missing.length > 0) {
+    throw new Error(
+      `Convert2Any: the ${what} contains characters the built-in PDF font cannot draw ` +
+        `(${missing.join(' ')}). Use Latin letters, digits and common punctuation.`,
+    );
+  }
+}
+
+/** The part of a page a viewer shows, turned the way it is displayed. */
+function frameOf(page: PDFPage) {
+  return visualFrame(page.getCropBox(), page.getRotation().angle);
+}
 
 /** Stamp text across every page. */
 export async function watermarkPdf(file: Blob, options: ToolOptions): Promise<Uint8Array> {
@@ -118,24 +166,37 @@ export async function watermarkPdf(file: Blob, options: ToolOptions): Promise<Ui
 
   const doc = await load(file);
   const font = await doc.embedFont(StandardFonts.HelveticaBold);
+  assertDrawable(font, text, 'watermark');
   const size = options.fontSize ?? 48;
   const opacity = Math.min(1, Math.max(0.02, (options.opacity ?? 20) / 100));
   const rotation = options.rotation ?? 45;
   const anchor = WATERMARK_ANCHORS[options.position ?? 'center'];
+  const textWidth = font.widthOfTextAtSize(text, size);
 
   for (const page of doc.getPages()) {
-    const { width, height } = page.getSize();
-    const textWidth = font.widthOfTextAtSize(text, size);
-    const point = anchor(width, height);
-    // The anchor marks the text centre, so back off by half the measured box.
+    // Work in the displayed frame so "top-left" means what the reader sees,
+    // even on pages carrying a /Rotate entry.
+    const frame = frameOf(page);
+    const centre = anchor(frame.width, frame.height);
+    const origin = centredTextOrigin({
+      cx: centre.x,
+      cy: centre.y,
+      width: textWidth,
+      height: size * CAP_HEIGHT,
+      angle: rotation,
+      frameWidth: frame.width,
+      frameHeight: frame.height,
+      margin: WATERMARK_MARGIN,
+    });
+    const point = frame.toPage(origin.x, origin.y);
     page.drawText(text, {
-      x: point.x - textWidth / 2,
-      y: point.y - size / 2,
+      x: point.x,
+      y: point.y,
       size,
       font,
       color: rgb(0.58, 0.004, 0.004),
       opacity,
-      rotate: degrees(rotation),
+      rotate: degrees(rotation + frame.angle),
     });
   }
   return doc.save();
@@ -152,13 +213,14 @@ const NUMBER_ALIGN: Record<NumberPosition, 'left' | 'center' | 'right'> = {
 
 /** Draw page numbers using a {n}/{total} template. */
 export async function numberPdf(file: Blob, options: ToolOptions): Promise<Uint8Array> {
-  const { StandardFonts, rgb } = await loadPdfLib();
+  const { StandardFonts, rgb, degrees } = await loadPdfLib();
   const doc = await load(file);
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const size = options.fontSize ?? 11;
   const margin = options.margin ?? 28;
   const startAt = options.startAt ?? 1;
   const template = options.template ?? '{n}';
+  assertDrawable(font, template.replaceAll('{n}', '').replaceAll('{total}', ''), 'page number text');
   const position = options.numberPosition ?? 'bottom-center';
   const align = NUMBER_ALIGN[position];
   const atTop = position.startsWith('top');
@@ -166,20 +228,27 @@ export async function numberPdf(file: Blob, options: ToolOptions): Promise<Uint8
   const pages = doc.getPages();
   for (const [i, page] of pages.entries()) {
     const label = formatPageLabel(template, startAt + i, pages.length + startAt - 1);
-    const { width, height } = page.getSize();
+    // Positions are in the displayed frame, so numbers land on the edge the
+    // reader sees as the bottom (or top) even on rotated pages.
+    const frame = frameOf(page);
     const textWidth = font.widthOfTextAtSize(label, size);
     const x =
       align === 'left'
         ? margin
         : align === 'right'
-          ? width - margin - textWidth
-          : (width - textWidth) / 2;
+          ? frame.width - margin - textWidth
+          : (frame.width - textWidth) / 2;
+    // The margin is measured to the text itself: the baseline at the bottom,
+    // the top of the capitals at the top.
+    const y = atTop ? frame.height - margin - size * CAP_HEIGHT : margin;
+    const point = frame.toPage(x, y);
     page.drawText(label, {
-      x,
-      y: atTop ? height - margin : margin,
+      x: point.x,
+      y: point.y,
       size,
       font,
       color: rgb(0.1, 0.1, 0.1),
+      rotate: degrees(frame.angle),
     });
   }
   return doc.save();
@@ -197,10 +266,11 @@ export async function compressPdf(file: Blob, options: ToolOptions): Promise<Uin
   const quality = Math.min(100, Math.max(1, options.imageQuality ?? 65)) / 100;
   const scale = dpi / 72;
 
-  const bitmaps = await pdfToImageBitmaps(file, scale);
   const out = await PDFDocument.create();
-  try {
-    for (const bitmap of bitmaps) {
+  // One page at a time: each bitmap is encoded and released before the next
+  // page is rendered, so memory stays flat however long the document is.
+  for await (const bitmap of renderPdfPages(file, scale)) {
+    try {
       const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Convert2Any: 2D context unavailable');
@@ -210,9 +280,9 @@ export async function compressPdf(file: Blob, options: ToolOptions): Promise<Uin
       // Back to 72dpi points so the page keeps its original physical size.
       const page = out.addPage([bitmap.width / scale, bitmap.height / scale]);
       page.drawImage(embedded, { x: 0, y: 0, width: page.getWidth(), height: page.getHeight() });
+    } finally {
+      bitmap.close();
     }
-  } finally {
-    for (const bitmap of bitmaps) bitmap.close();
   }
   return out.save();
 }
@@ -300,45 +370,46 @@ export async function loadPdfJs() {
 }
 
 /**
- * Rasterize every PDF page to an ImageBitmap at `scale` (2 = 144dpi-ish).
+ * Rasterize PDF pages to ImageBitmaps at `scale` (2 = 144dpi-ish), ONE AT A
+ * TIME. An A4 page at scale 2 is about 8 MB of pixels, so rendering a whole
+ * document up front would need gigabytes for a long PDF; as a generator, the
+ * caller encodes and closes each bitmap before the next page is drawn.
+ *
  * pdf.js renders into a canvas we own; the bitmaps feed the image encode path,
- * which strips metadata by construction like any other decode.
+ * which strips metadata by construction like any other decode. The caller
+ * owns each yielded bitmap and must close it.
  */
-export async function pdfToImageBitmaps(
+export async function* renderPdfPages(
   file: Blob,
   scale = 2,
   password?: string,
-): Promise<ImageBitmap[]> {
+): AsyncGenerator<ImageBitmap> {
   const pdfjs = await loadPdfJs();
   const loadingTask = pdfjs.getDocument({ data: await file.arrayBuffer(), password });
-  const doc = await loadingTask.promise;
-  const bitmaps: ImageBitmap[] = [];
   try {
+    const doc = await loadingTask.promise;
+    if (doc.numPages === 0) throw new Error('Convert2Any: PDF rendered no pages');
     for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber++) {
       const page = await doc.getPage(pageNumber);
-      const viewport = page.getViewport({ scale });
-      const canvas = new OffscreenCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Convert2Any: 2D context unavailable');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      // pdf.js v4 types its render params for a DOM canvas; an
-      // OffscreenCanvas context is runtime-accepted (standard worker usage).
-      await page.render({ canvasContext: ctx as unknown as CanvasRenderingContext2D, viewport })
-        .promise;
-      bitmaps.push(canvas.transferToImageBitmap());
-      page.cleanup();
+      try {
+        const viewport = page.getViewport({ scale });
+        const canvas = new OffscreenCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Convert2Any: 2D context unavailable');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // pdf.js v4 types its render params for a DOM canvas; an
+        // OffscreenCanvas context is runtime-accepted (standard worker usage).
+        await page.render({ canvasContext: ctx as unknown as CanvasRenderingContext2D, viewport })
+          .promise;
+        yield canvas.transferToImageBitmap();
+      } finally {
+        page.cleanup();
+      }
     }
   } finally {
+    // Runs on completion, on error, and when the caller stops early.
     // pdf.js v4 exposes cleanup on the loading task, not the document proxy.
-    loadingTask.destroy();
+    await loadingTask.destroy();
   }
-  if (bitmaps.length === 0) throw new Error('Convert2Any: PDF rendered no pages');
-  return bitmaps;
-}
-
-/** Page count without rasterizing — used by tool forms to preview ranges. */
-export async function pdfPageCount(file: Blob): Promise<number> {
-  const doc = await load(file);
-  return doc.getPageCount();
 }

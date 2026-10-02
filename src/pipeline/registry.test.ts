@@ -157,16 +157,22 @@ describe('supportedOutputs', () => {
   it('gives PDFs the no-option tools plus rasterization outputs', () => {
     const outs = supportedOutputs('pdf');
     expect(outs.map((k) => (k.type === 'image' ? 'img' : k.tool))).toEqual([
-      'pdf-merge',
-      'pdf-split',
-      'pdf-rotate',
-      'pdf-compress',
       'pdf-to-docx',
       'pdf-to-xlsx',
       'img',
       'img',
       'img',
+      'pdf-compress',
+      'pdf-split',
+      'pdf-rotate',
     ]);
+  });
+
+  it('never offers merging for a single PDF, and defaults to a real conversion', () => {
+    // Merging one file only copies it; it used to be the default choice.
+    const outs = supportedOutputs('pdf');
+    expect(outs.some((k) => k.type === 'pdf-tool' && k.tool === 'pdf-merge')).toBe(false);
+    expect(outs[0]).toEqual({ type: 'doc-tool', tool: 'pdf-to-docx' });
   });
 
   it('keeps option-requiring tools out of the quick picker', () => {

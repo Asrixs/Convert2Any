@@ -6,11 +6,31 @@ import { IMAGE_FORMATS, type ImageOutputFormat } from './formats';
  * raw pixels only, so no metadata can travel through them.
  */
 
-async function imageDataFromBitmap(bitmap: ImageBitmap): Promise<ImageData> {
+/**
+ * Draw a bitmap ready for encoding. JPEG has no alpha channel and encoders
+ * turn transparent pixels black, so JPEG output gets a white backdrop first —
+ * which is how a transparent image looks on a page anyway.
+ */
+export function paintForFormat(
+  ctx: OffscreenCanvasRenderingContext2D,
+  bitmap: ImageBitmap,
+  format: ImageOutputFormat,
+): void {
+  if (format === 'jpeg') {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, bitmap.width, bitmap.height);
+  }
+  ctx.drawImage(bitmap, 0, 0);
+}
+
+async function imageDataFromBitmap(
+  bitmap: ImageBitmap,
+  format: ImageOutputFormat,
+): Promise<ImageData> {
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('no-upload: 2D context unavailable');
-  ctx.drawImage(bitmap, 0, 0);
+  if (!ctx) throw new Error('Convert2Any: 2D context unavailable');
+  paintForFormat(ctx, bitmap, format);
   return ctx.getImageData(0, 0, bitmap.width, bitmap.height);
 }
 
@@ -19,7 +39,7 @@ async function wasmEncode(
   format: ImageOutputFormat,
   quality: number,
 ): Promise<Blob> {
-  const imageData = await imageDataFromBitmap(bitmap);
+  const imageData = await imageDataFromBitmap(bitmap, format);
   const mime = IMAGE_FORMATS[format].mime;
   if (format === 'png') {
     const { encode: encodePng } = await import('@jsquash/png');
@@ -43,7 +63,7 @@ export async function encodeBitmap(
     return await wasmEncode(bitmap, format, quality);
   } catch (err) {
     throw new Error(
-      `no-upload: failed to encode ${format} (${err instanceof Error ? err.message : 'unknown'})`,
+      `Convert2Any: failed to encode ${format} (${err instanceof Error ? err.message : 'unknown'})`,
       { cause: err },
     );
   }
