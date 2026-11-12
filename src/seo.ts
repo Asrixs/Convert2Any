@@ -17,7 +17,7 @@ export interface SeoData {
 }
 
 export const SITE_NAME = 'Convert2Any';
-export const SITE_URL = 'https://asrixs.github.io';
+export const SITE_URL = 'https://asrixs.github.io/Convert2Any';
 
 const DEFAULT: SeoData = {
   title: 'Convert2Any | Convert, edit and secure files in your browser',
