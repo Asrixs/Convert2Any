@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import type { ComponentChildren, JSX } from 'preact';
 import { useLocation } from 'preact-iso';
 import { Icon } from './Icon';
+import { stripBase } from '../base';
 import { CATEGORIES, toolsByCategory } from '../tools/catalog';
 import { currentTheme, followSystemTheme, setTheme } from '../theme';
 
@@ -65,7 +66,7 @@ export function Layout({ children }: { children: ComponentChildren }): JSX.Eleme
                 <a
                   class="nav-link"
                   href={item.href}
-                  aria-current={path.startsWith(item.href) ? 'page' : undefined}
+                  aria-current={stripBase(path).startsWith(item.href) ? 'page' : undefined}
                 >
                   {item.label}
                 </a>
