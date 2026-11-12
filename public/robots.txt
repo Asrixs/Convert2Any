@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://convert2any.app/sitemap.xml
+Sitemap: https://asrixs.github.io/sitemap.xml
