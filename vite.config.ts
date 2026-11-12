@@ -2,6 +2,8 @@ import { defineConfig } from 'vite';
 import { vitePrerenderPlugin } from 'vite-prerender-plugin';
 
 export default defineConfig({
+  // GitHub Pages serves the repo at https://asrixs.github.io/Convert2Any/ (see src/base.ts).
+  base: '/Convert2Any/',
   plugins: [
     /**
      * Emits real static HTML for every route at build time. The output stays
