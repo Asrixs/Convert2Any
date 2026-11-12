@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 // fileURLToPath, not url.pathname: a directory name containing a space
 // arrives percent-encoded from pathname and would not resolve on disk.
 const DIST = fileURLToPath(new URL('../dist/', import.meta.url));
-const SITE_URL = process.env.SITE_URL ?? 'https://asrixs.github.io';
+const SITE_URL = process.env.SITE_URL ?? 'https://asrixs.github.io/Convert2Any';
 
 /** Every .html file under dist, recursively. */
 async function htmlFiles(dir) {
