@@ -1,5 +1,6 @@
 import type { JSX } from 'preact';
 import { LocationProvider, Router, Route } from 'preact-iso';
+import { routePath } from './base';
 import { Layout } from './components/Layout';
 import { Home } from './pages/Home';
 import { Tools } from './pages/Tools';
@@ -23,15 +24,15 @@ export function App(): JSX.Element {
     <LocationProvider>
       <Layout>
         <Router>
-          <Route path="/" component={Home} />
-          <Route path="/tools" component={Tools} />
-          <Route path="/tools/:slug" component={ToolPage} />
-          <Route path="/pricing" component={Pricing} />
-          <Route path="/security" component={Security} />
-          <Route path="/about" component={About} />
-          <Route path="/privacy" component={Privacy} />
-          <Route path="/terms" component={Terms} />
-          <Route path="/contact" component={Contact} />
+          <Route path={routePath('/')} component={Home} />
+          <Route path={routePath('/tools')} component={Tools} />
+          <Route path={routePath('/tools/:slug')} component={ToolPage} />
+          <Route path={routePath('/pricing')} component={Pricing} />
+          <Route path={routePath('/security')} component={Security} />
+          <Route path={routePath('/about')} component={About} />
+          <Route path={routePath('/privacy')} component={Privacy} />
+          <Route path={routePath('/terms')} component={Terms} />
+          <Route path={routePath('/contact')} component={Contact} />
           <Route default component={NotFound} />
         </Router>
       </Layout>
