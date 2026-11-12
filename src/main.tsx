@@ -1,5 +1,6 @@
 import { hydrate, render } from 'preact';
 import { App } from './App';
+import { withBase } from './base';
 import { headElements, resetSeo } from './seo';
 import { toolPaths } from './tools/catalog';
 // Self-hosted, so the site still makes no third-party requests:
@@ -80,7 +81,7 @@ export async function prerender(data: { url: string }) {
   // locationStub points preact-iso's router at the route being rendered;
   // there is no window during the build for it to read a URL from.
   const { locationStub } = await import('preact-iso/prerender');
-  locationStub(data.url);
+  locationStub(withBase(data.url));
   resetSeo();
 
   const result = await preactPrerender(<App />);
